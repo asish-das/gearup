@@ -13,7 +13,7 @@ class EmergencyScreen extends StatelessWidget {
       backgroundColor: AppTheme.backgroundDark,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.redAccent.withOpacity(0.1),
+        backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
         title: const Text(
           'Emergency Assistance',
           style: TextStyle(
@@ -31,9 +31,9 @@ class EmergencyScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.1),
+                color: Colors.redAccent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -136,16 +136,16 @@ class EmergencyScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
+                color: color.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 28),
@@ -167,14 +167,14 @@ class EmergencyScreen extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                       fontSize: 13,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: color.withOpacity(0.7)),
+            Icon(Icons.chevron_right, color: color.withValues(alpha: 0.7)),
           ],
         ),
       ),
@@ -304,7 +304,7 @@ class EmergencyScreen extends StatelessWidget {
                       color: AppTheme.backgroundDark,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: AppTheme.primary.withOpacity(0.3),
+                        color: AppTheme.primary.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(

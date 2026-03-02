@@ -203,7 +203,7 @@ class RevenueView extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        const Color(0xFF10B981).withOpacity(0.2),
+                        const Color(0xFF10B981).withValues(alpha: 0.2),
                         Colors.white,
                       ],
                       begin: Alignment.topCenter,

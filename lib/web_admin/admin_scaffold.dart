@@ -61,7 +61,7 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                     ? null
                     : [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 10,
                           offset: const Offset(2, 0),
                         ),
@@ -83,7 +83,7 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                                 BoxShadow(
                                   color: const Color(
                                     0xFF5D40D4,
-                                  ).withOpacity(0.2),
+                                  ).withValues(alpha: 0.2),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
@@ -107,7 +107,7 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                                     BoxShadow(
                                       color: const Color(
                                         0xFF5D40D4,
-                                      ).withOpacity(0.2),
+                                      ).withValues(alpha: 0.2),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     ),
@@ -232,7 +232,7 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                                 border: Border.all(
                                   color: const Color(
                                     0xFF5D40D4,
-                                  ).withOpacity(0.2),
+                                  ).withValues(alpha: 0.2),
                                 ),
                               ),
                               child: Row(
@@ -366,7 +366,7 @@ class _AdminScaffoldState extends State<AdminScaffold> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF5D40D4).withOpacity(0.2),
+                    color: const Color(0xFF5D40D4).withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),

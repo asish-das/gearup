@@ -381,7 +381,7 @@ class ServiceCentersView extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isActive
-                        ? const Color(0xFF10B981).withOpacity(0.1)
+                        ? const Color(0xFF10B981).withValues(alpha: 0.1)
                         : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(16),
                   ),

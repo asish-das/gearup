@@ -274,7 +274,7 @@ class DashboardView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.1),
+                    color: iconColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, color: iconColor),
@@ -285,7 +285,7 @@ class DashboardView extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
@@ -381,7 +381,7 @@ class _MockChartPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final fillPaint = Paint()
-      ..color = const Color(0xFF5D40D4).withOpacity(0.1)
+      ..color = const Color(0xFF5D40D4).withValues(alpha: 0.1)
       ..style = PaintingStyle.fill;
 
     final path = Path();

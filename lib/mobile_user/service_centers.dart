@@ -12,9 +12,9 @@ class ServiceCentersScreen extends StatelessWidget {
       // AppBar
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: AppTheme.backgroundDark.withOpacity(
+        backgroundColor: AppTheme.backgroundDark.withValues(alpha: 
           0.8,
-        ), // Instead of withOpacity(0.8), standard transparency handle
+        ), // Instead of withValues(alpha: 0.8), standard transparency handle
         title: const Text(
           'GearUp Service Centers',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
@@ -24,7 +24,7 @@ class ServiceCentersScreen extends StatelessWidget {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.1),
+              color: AppTheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.menu, color: AppTheme.primary, size: 20),

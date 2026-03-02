@@ -156,7 +156,7 @@ class _LiveTrackingMapState extends State<LiveTrackingMap> {
                 height: 60,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.redAccent.withOpacity(0.2),
+                    color: Colors.redAccent.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Center(

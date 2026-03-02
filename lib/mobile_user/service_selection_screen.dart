@@ -79,16 +79,16 @@ class ServiceSelectionScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.primary.withOpacity(0.05),
+          color: AppTheme.primary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.2),
+                color: AppTheme.primary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: AppTheme.primary, size: 28),

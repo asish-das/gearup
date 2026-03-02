@@ -36,15 +36,17 @@ class _ServiceLoginScreenState extends State<ServiceLoginScreen> {
 
     try {
       // Use Firebase Auth directly for service center login
-      final auth.UserCredential result = await auth.FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      final auth.UserCredential result = await auth.FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
 
       if (result.user != null) {
         // Check if user is service center
         final userData = await AuthService.getUserData(result.user!.uid);
         if (userData.role == UserRole.serviceCenter) {
+          if (!mounted) return;
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const ServiceScaffold()),
             (route) => false,
@@ -55,16 +57,16 @@ class _ServiceLoginScreenState extends State<ServiceLoginScreen> {
         }
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -78,7 +80,7 @@ class _ServiceLoginScreenState extends State<ServiceLoginScreen> {
             end: Alignment.bottomRight,
             colors: [
               AppTheme.backgroundDark,
-              AppTheme.backgroundLight.withOpacity(0.3),
+              AppTheme.backgroundLight.withValues(alpha: 0.3),
             ],
           ),
         ),
@@ -90,15 +92,15 @@ class _ServiceLoginScreenState extends State<ServiceLoginScreen> {
                 constraints: const BoxConstraints(maxWidth: 400),
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: AppTheme.backgroundLight.withOpacity(0.1),
+                  color: AppTheme.backgroundLight.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Colors.blue.withOpacity(0.3),
+                    color: Colors.blue.withValues(alpha: 0.3),
                     width: 2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
@@ -128,7 +130,7 @@ class _ServiceLoginScreenState extends State<ServiceLoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      
+
                       // Title
                       Text(
                         'Service Center Login',
@@ -156,14 +158,21 @@ class _ServiceLoginScreenState extends State<ServiceLoginScreen> {
                         decoration: InputDecoration(
                           labelText: 'Email Address',
                           labelStyle: const TextStyle(color: Colors.white70),
-                          prefixIcon: const Icon(Icons.email, color: Colors.blue),
+                          prefixIcon: const Icon(
+                            Icons.email,
+                            color: Colors.blue,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.blue.withOpacity(0.3)),
+                            borderSide: BorderSide(
+                              color: Colors.blue.withValues(alpha: 0.3),
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.blue.withOpacity(0.3)),
+                            borderSide: BorderSide(
+                              color: Colors.blue.withValues(alpha: 0.3),
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -174,7 +183,9 @@ class _ServiceLoginScreenState extends State<ServiceLoginScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
                           }
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                          if (!RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          ).hasMatch(value)) {
                             return 'Please enter a valid email';
                           }
                           return null;
@@ -190,10 +201,15 @@ class _ServiceLoginScreenState extends State<ServiceLoginScreen> {
                         decoration: InputDecoration(
                           labelText: 'Password',
                           labelStyle: const TextStyle(color: Colors.white70),
-                          prefixIcon: const Icon(Icons.lock, color: Colors.blue),
+                          prefixIcon: const Icon(
+                            Icons.lock,
+                            color: Colors.blue,
+                          ),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                              _obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                               color: Colors.white70,
                             ),
                             onPressed: () {
@@ -204,11 +220,15 @@ class _ServiceLoginScreenState extends State<ServiceLoginScreen> {
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.blue.withOpacity(0.3)),
+                            borderSide: BorderSide(
+                              color: Colors.blue.withValues(alpha: 0.3),
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.blue.withOpacity(0.3)),
+                            borderSide: BorderSide(
+                              color: Colors.blue.withValues(alpha: 0.3),
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -246,7 +266,9 @@ class _ServiceLoginScreenState extends State<ServiceLoginScreen> {
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
                                   ),
                                 )
                               : Text(

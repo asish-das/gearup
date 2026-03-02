@@ -107,7 +107,7 @@ class AdminManagementView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF5D40D4).withOpacity(0.3),
+                      color: const Color(0xFF5D40D4).withValues(alpha: 0.3),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),

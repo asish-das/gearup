@@ -241,7 +241,7 @@ class ServiceHistoryScreen extends StatelessWidget {
                                   style: TextStyle(color: AppTheme.accent),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primary.withOpacity(
+                                  backgroundColor: AppTheme.primary.withValues(alpha: 
                                     0.2,
                                   ), // Use withValues if flutter version allows, string building takes withOpacity here implicitly
                                   elevation: 0,

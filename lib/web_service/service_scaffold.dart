@@ -59,7 +59,7 @@ class _ServiceScaffoldState extends State<ServiceScaffold> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF5D40D4).withOpacity(0.2),
+                              color: const Color(0xFF5D40D4).withValues(alpha: 0.2),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -149,7 +149,7 @@ class _ServiceScaffoldState extends State<ServiceScaffold> {
                             color: const Color(0xFFF3E8FF),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: const Color(0xFF5D40D4).withOpacity(0.2),
+                              color: const Color(0xFF5D40D4).withValues(alpha: 0.2),
                             ),
                           ),
                           child: Row(

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gearup/theme/app_theme.dart';
-import 'package:gearup/web_admin/admin_login_screen.dart';
-import 'package:gearup/web_service/service_login_screen.dart';
 
 class WebLoginSelection extends StatelessWidget {
   const WebLoginSelection({super.key});
@@ -17,7 +15,7 @@ class WebLoginSelection extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               AppTheme.backgroundDark,
-              AppTheme.backgroundLight.withOpacity(0.3),
+              AppTheme.backgroundLight.withValues(alpha: 0.3),
             ],
           ),
         ),
@@ -43,7 +41,7 @@ class WebLoginSelection extends StatelessWidget {
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primary.withOpacity(0.3),
+                              color: AppTheme.primary.withValues(alpha: 0.3),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -85,15 +83,17 @@ class WebLoginSelection extends StatelessWidget {
                         constraints: const BoxConstraints(maxWidth: 400),
                         padding: const EdgeInsets.all(32),
                         decoration: BoxDecoration(
-                          color: AppTheme.backgroundLight.withOpacity(0.1),
+                          color: AppTheme.backgroundLight.withValues(
+                            alpha: 0.1,
+                          ),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: AppTheme.primary.withOpacity(0.3),
+                            color: AppTheme.primary.withValues(alpha: 0.3),
                             width: 2,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 10,
                               offset: const Offset(0, 5),
                             ),
@@ -134,7 +134,9 @@ class WebLoginSelection extends StatelessWidget {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppTheme.primary,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -166,15 +168,17 @@ class WebLoginSelection extends StatelessWidget {
                         constraints: const BoxConstraints(maxWidth: 400),
                         padding: const EdgeInsets.all(32),
                         decoration: BoxDecoration(
-                          color: AppTheme.backgroundLight.withOpacity(0.1),
+                          color: AppTheme.backgroundLight.withValues(
+                            alpha: 0.1,
+                          ),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.blue.withOpacity(0.3),
+                            color: Colors.blue.withValues(alpha: 0.3),
                             width: 2,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 10,
                               offset: const Offset(0, 5),
                             ),
@@ -182,11 +186,7 @@ class WebLoginSelection extends StatelessWidget {
                         ),
                         child: Column(
                           children: [
-                            Icon(
-                              Icons.build,
-                              size: 48,
-                              color: Colors.blue,
-                            ),
+                            Icon(Icons.build, size: 48, color: Colors.blue),
                             const SizedBox(height: 16),
                             Text(
                               'Service Center Login',
@@ -210,12 +210,17 @@ class WebLoginSelection extends StatelessWidget {
                               width: double.infinity,
                               child: ElevatedButton(
                                 onPressed: () {
-                                  Navigator.pushNamed(context, '/service-login');
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/service-login',
+                                  );
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blue,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),

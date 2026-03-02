@@ -258,7 +258,7 @@ class BookingsView extends StatelessWidget {
         boxShadow: isHighlighted
             ? [
                 BoxShadow(
-                  color: const Color(0xFF5D40D4).withOpacity(0.1),
+                  color: const Color(0xFF5D40D4).withValues(alpha: 0.1),
                   blurRadius: 10,
                   spreadRadius: 2,
                 ),
@@ -291,7 +291,7 @@ class BookingsView extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 24,
-                        backgroundColor: statusColor.withOpacity(0.1),
+                        backgroundColor: statusColor.withValues(alpha: 0.1),
                         child: Icon(Icons.person, color: statusColor),
                       ),
                       const SizedBox(width: 16),
@@ -326,7 +326,7 @@ class BookingsView extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isHighlighted
                           ? const Color(0xFFF3E8FF)
-                          : statusColor.withOpacity(0.1),
+                          : statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(

@@ -16,7 +16,6 @@ class HomeDashboard extends StatefulWidget {
 class _HomeDashboardState extends State<HomeDashboard> {
   User? _currentUser;
   bool _isLoading = true;
-  List<Vehicle> _vehicles = [];
   Vehicle? _primaryVehicle;
 
   @override
@@ -34,7 +33,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
         setState(() {
           _currentUser = userData;
-          _vehicles = vehicles;
           _primaryVehicle = vehicles.isNotEmpty ? vehicles.first : null;
           _isLoading = false;
         });
@@ -193,10 +191,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
         decoration: BoxDecoration(
           color: AppTheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
+          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.25),
+              color: Colors.black.withValues(alpha: 0.25),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -238,10 +236,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.primary.withOpacity(0.3), width: 1),
+        border: Border.all(
+          color: AppTheme.primary.withValues(alpha: 0.3),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -259,7 +260,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 height: 150,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTheme.primary.withOpacity(0.15),
+                  color: AppTheme.primary.withValues(alpha: 0.15),
                 ),
               ),
             ),
@@ -272,7 +273,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(24),
                     ),
-                    color: AppTheme.backgroundDark.withOpacity(0.5),
+                    color: AppTheme.backgroundDark.withValues(alpha: 0.5),
                   ),
                   child: _primaryVehicle!.imageUrl.isNotEmpty
                       ? ClipRRect(
@@ -349,10 +350,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primary.withOpacity(0.2),
+                              color: AppTheme.primary.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: AppTheme.primary.withOpacity(0.5),
+                                color: AppTheme.primary.withValues(alpha: 0.5),
                               ),
                             ),
                             child: Row(
@@ -409,7 +410,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             elevation: 4,
-                            shadowColor: AppTheme.accent.withOpacity(0.5),
+                            shadowColor: AppTheme.accent.withValues(alpha: 0.5),
                           ),
                         ),
                       ),
@@ -429,7 +430,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.primary.withOpacity(0.2),
+          color: AppTheme.primary.withValues(alpha: 0.2),
           shape: BoxShape.circle,
         ),
         child: Icon(Icons.directions_car, color: AppTheme.primary, size: 48),
@@ -490,12 +491,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
             color: AppTheme.backgroundDark,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppTheme.primary.withOpacity(0.5),
+              color: AppTheme.primary.withValues(alpha: 0.5),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.primary.withOpacity(0.2),
+                color: AppTheme.primary.withValues(alpha: 0.2),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -514,7 +515,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   ),
                   border: Border(
                     bottom: BorderSide(
-                      color: AppTheme.primary.withOpacity(0.2),
+                      color: AppTheme.primary.withValues(alpha: 0.2),
                     ),
                   ),
                 ),
@@ -523,7 +524,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(0.2),
+                        color: AppTheme.primary.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -598,7 +599,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     bottom: Radius.circular(22),
                   ),
                   border: Border(
-                    top: BorderSide(color: AppTheme.primary.withOpacity(0.2)),
+                    top: BorderSide(
+                      color: AppTheme.primary.withValues(alpha: 0.2),
+                    ),
                   ),
                 ),
                 child: Row(
@@ -639,7 +642,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               await VehicleService.addVehicle(vehicle);
                               await _loadUserData(); // Refresh vehicle list
 
-                              if (mounted) {
+                              if (context.mounted) {
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -651,7 +654,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 );
                               }
                             } catch (e) {
-                              if (mounted) {
+                              if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('Error adding vehicle: $e'),
@@ -686,12 +689,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
         color: AppTheme.backgroundDark,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppTheme.primary.withOpacity(0.4),
+          color: AppTheme.primary.withValues(alpha: 0.4),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -706,7 +709,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
           hintText: hint,
           prefixIcon: Icon(
             icon,
-            color: AppTheme.primary.withOpacity(0.8),
+            color: AppTheme.primary.withValues(alpha: 0.8),
             size: 22,
           ),
           labelStyle: TextStyle(
@@ -735,14 +738,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ? BoxDecoration(
               color: Colors.transparent,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: color.withOpacity(0.5), width: 2),
+              border: Border.all(color: color.withValues(alpha: 0.5), width: 2),
             )
           : BoxDecoration(
               color: color,
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: color.withOpacity(0.3),
+                  color: color.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -788,7 +791,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, color: color, size: 32),
@@ -807,9 +810,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.primary.withOpacity(0.1),
+        color: AppTheme.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -912,9 +915,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.primary.withOpacity(0.1),
+            color: AppTheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.primary.withOpacity(0.1)),
+            border: Border.all(color: AppTheme.primary.withValues(alpha: 0.1)),
           ),
           child: Row(
             children: [

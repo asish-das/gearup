@@ -106,10 +106,10 @@ class VehicleOwnersView extends StatelessWidget {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF5D40D4).withOpacity(0.1),
+                      color: const Color(0xFF5D40D4).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: const Color(0xFF5D40D4).withOpacity(0.2),
+                        color: const Color(0xFF5D40D4).withValues(alpha: 0.2),
                       ),
                     ),
                     child: Row(
@@ -142,7 +142,7 @@ class VehicleOwnersView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF5D40D4).withOpacity(0.3),
+                          color: const Color(0xFF5D40D4).withValues(alpha: 0.3),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -447,7 +447,7 @@ class VehicleOwnersView extends StatelessWidget {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF5D40D4).withOpacity(0.1),
+                  color: const Color(0xFF5D40D4).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -498,8 +498,8 @@ class VehicleOwnersView extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isActive
-                        ? const Color(0xFF10B981).withOpacity(0.1)
-                        : const Color(0xFFF59E0B).withOpacity(0.1),
+                        ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                        : const Color(0xFFF59E0B).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(

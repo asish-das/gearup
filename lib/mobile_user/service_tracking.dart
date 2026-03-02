@@ -62,9 +62,9 @@ class ServiceTrackingScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: Container(
               decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.1),
+                color: AppTheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
               ),
               child: Column(
                 children: [
@@ -124,7 +124,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: AppTheme.primary.withOpacity(0.2),
+                                color: AppTheme.primary.withValues(alpha: 0.2),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
@@ -191,7 +191,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(0.2),
+                        color: AppTheme.primary.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Text(
@@ -228,7 +228,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                   'Servicing Gear System',
                   'Active — Estimated 45 mins left',
                   isLineSolid: true,
-                  lineColor: AppTheme.primary.withOpacity(0.2),
+                  lineColor: AppTheme.primary.withValues(alpha: 0.2),
                   isActive: true,
                 ),
                 _buildTimelineItem(
@@ -250,9 +250,9 @@ class ServiceTrackingScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.1),
+                color: AppTheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,7 +301,7 @@ class ServiceTrackingScreen extends StatelessWidget {
             Icon(
               Icons.check_circle_outline,
               size: 80,
-              color: AppTheme.successGreen.withOpacity(0.5),
+              color: AppTheme.successGreen.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             const Text(
@@ -330,9 +330,9 @@ class ServiceTrackingScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.1),
+                color: Colors.redAccent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,7 +342,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.redAccent.withOpacity(0.2),
+                          color: Colors.redAccent.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -384,7 +384,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: Colors.redAccent.withOpacity(0.2),
+                          color: Colors.redAccent.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -441,7 +441,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.redAccent.withOpacity(0.3),
+                      color: Colors.redAccent.withValues(alpha: 0.3),
                     ),
                   ),
                   clipBehavior: Clip.antiAlias,
@@ -472,7 +472,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                   'Unit Dispatched to Location',
                   'Active — Driver is en route (5 mins away)',
                   isLineSolid: true,
-                  lineColor: Colors.redAccent.withOpacity(0.3),
+                  lineColor: Colors.redAccent.withValues(alpha: 0.3),
                   isActive: true,
                   activeColor: Colors.redAccent,
                 ),
@@ -503,9 +503,9 @@ class ServiceTrackingScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.1),
+                color: Colors.redAccent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -616,7 +616,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                   height: 6,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: progressColor.withOpacity(0.2),
+                    color: progressColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(3),
                   ),
                   alignment: Alignment.centerLeft,

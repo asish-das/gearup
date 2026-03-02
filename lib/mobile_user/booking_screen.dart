@@ -82,9 +82,9 @@ class _BookingScreenState extends State<BookingScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.05),
+                color: AppTheme.primary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
@@ -93,7 +93,7 @@ class _BookingScreenState extends State<BookingScreen> {
                     height: 64,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      color: AppTheme.primary.withOpacity(0.2),
+                      color: AppTheme.primary.withValues(alpha: 0.2),
                     ),
                     child: const Icon(
                       Icons.settings,
@@ -154,9 +154,9 @@ class _BookingScreenState extends State<BookingScreen> {
                 margin: const EdgeInsets.only(top: 16),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.yellow.withOpacity(0.1),
+                  color: Colors.yellow.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.yellow.withOpacity(0.3)),
+                  border: Border.all(color: Colors.yellow.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: const [
@@ -203,15 +203,15 @@ class _BookingScreenState extends State<BookingScreen> {
                         color: isSelected
                             ? AppTheme.primary
                             : isUnavailable
-                            ? Colors.grey.withOpacity(0.1)
-                            : AppTheme.primary.withOpacity(0.05),
+                            ? Colors.grey.withValues(alpha: 0.1)
+                            : AppTheme.primary.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isSelected
                               ? AppTheme.primary
                               : isUnavailable
-                              ? Colors.grey.withOpacity(0.2)
-                              : AppTheme.primary.withOpacity(0.3),
+                              ? Colors.grey.withValues(alpha: 0.2)
+                              : AppTheme.primary.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Column(
@@ -240,7 +240,7 @@ class _BookingScreenState extends State<BookingScreen> {
                               color: isSelected
                                   ? Colors.white70
                                   : isUnavailable
-                                  ? Colors.redAccent.withOpacity(0.5)
+                                  ? Colors.redAccent.withValues(alpha: 0.5)
                                   : Colors.green,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -257,9 +257,9 @@ class _BookingScreenState extends State<BookingScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.05),
+                color: AppTheme.primary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.primary.withOpacity(0.1)),
+                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.1)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,7 +319,7 @@ class _BookingScreenState extends State<BookingScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey.withOpacity(0.3),
+                disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
                 disabledForegroundColor: Colors.white54,
                 minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(

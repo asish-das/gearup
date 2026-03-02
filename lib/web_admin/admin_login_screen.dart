@@ -46,6 +46,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         // Check if user is admin
         final userData = await AuthService.getUserData(result.user!.uid);
         if (userData.role == UserRole.admin) {
+          if (!mounted) return;
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const AdminScaffold()),
             (route) => false,
@@ -56,13 +57,16 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         }
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -76,7 +80,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             end: Alignment.bottomRight,
             colors: [
               AppTheme.backgroundDark,
-              AppTheme.backgroundLight.withOpacity(0.3),
+              AppTheme.backgroundLight.withValues(alpha: 0.3),
             ],
           ),
         ),
@@ -88,15 +92,15 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 constraints: const BoxConstraints(maxWidth: 400),
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: AppTheme.backgroundLight.withOpacity(0.1),
+                  color: AppTheme.backgroundLight.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppTheme.primary.withOpacity(0.3),
+                    color: AppTheme.primary.withValues(alpha: 0.3),
                     width: 2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
@@ -161,13 +165,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(
-                              color: AppTheme.primary.withOpacity(0.3),
+                              color: AppTheme.primary.withValues(alpha: 0.3),
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(
-                              color: AppTheme.primary.withOpacity(0.3),
+                              color: AppTheme.primary.withValues(alpha: 0.3),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
@@ -219,13 +223,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(
-                              color: AppTheme.primary.withOpacity(0.3),
+                              color: AppTheme.primary.withValues(alpha: 0.3),
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(
-                              color: AppTheme.primary.withOpacity(0.3),
+                              color: AppTheme.primary.withValues(alpha: 0.3),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(

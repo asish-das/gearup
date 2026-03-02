@@ -259,9 +259,9 @@ class _ProfilePageState extends State<ProfilePage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,7 +269,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.2),
+                      color: Colors.orange.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -340,7 +340,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 56),
-                side: BorderSide(color: Colors.redAccent.withOpacity(0.5)),
+                side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.5)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -357,16 +357,16 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.primary.withOpacity(0.05),
+        color: AppTheme.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.primary.withOpacity(0.1)),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.2),
+              color: AppTheme.primary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: AppTheme.primary),
@@ -409,7 +409,7 @@ class _ProfilePageState extends State<ProfilePage> {
         decoration: BoxDecoration(
           color: AppTheme.backgroundLight,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
+          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
@@ -486,10 +486,10 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.primary.withOpacity(0.3), width: 1),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -511,7 +511,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   height: 150,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppTheme.primary.withOpacity(0.15),
+                    color: AppTheme.primary.withValues(alpha: 0.15),
                   ),
                 ),
               ),
@@ -531,12 +531,12 @@ class _ProfilePageState extends State<ProfilePage> {
                             color: AppTheme.backgroundDark,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: AppTheme.primary.withOpacity(0.5),
+                              color: AppTheme.primary.withValues(alpha: 0.5),
                               width: 1.5,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primary.withOpacity(0.2),
+                                color: AppTheme.primary.withValues(alpha: 0.2),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -551,7 +551,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     errorBuilder: (context, error, stackTrace) {
                                       return Icon(
                                         Icons.directions_car,
-                                        color: AppTheme.primary.withOpacity(
+                                        color: AppTheme.primary.withValues(alpha: 
                                           0.8,
                                         ),
                                         size: 32,
@@ -561,7 +561,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 )
                               : Icon(
                                   Icons.directions_car,
-                                  color: AppTheme.primary.withOpacity(0.8),
+                                  color: AppTheme.primary.withValues(alpha: 0.8),
                                   size: 32,
                                 ),
                         ),
@@ -589,7 +589,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primary.withOpacity(0.2),
+                                  color: AppTheme.primary.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -621,14 +621,14 @@ class _ProfilePageState extends State<ProfilePage> {
                                         ? AppTheme.accent
                                         : Colors.redAccent,
                                     vehicle.isConnected
-                                        ? AppTheme.accent.withOpacity(0.15)
-                                        : Colors.redAccent.withOpacity(0.15),
+                                        ? AppTheme.accent.withValues(alpha: 0.15)
+                                        : Colors.redAccent.withValues(alpha: 0.15),
                                   ),
                                   _buildStatusIndicator(
                                     Icons.battery_charging_full,
                                     vehicle.batteryDisplay,
                                     AppTheme.primary,
-                                    AppTheme.primary.withOpacity(0.15),
+                                    AppTheme.primary.withValues(alpha: 0.15),
                                   ),
                                 ],
                               ),
@@ -653,13 +653,13 @@ class _ProfilePageState extends State<ProfilePage> {
                         _buildActionButton(
                           icon: Icons.info_outline,
                           label: 'Details',
-                          color: Colors.blueAccent.withOpacity(0.8),
+                          color: Colors.blueAccent.withValues(alpha: 0.8),
                           onTap: () => _showVehicleDetails(vehicle),
                         ),
                         _buildActionButton(
                           icon: Icons.delete_outline,
                           label: 'Remove',
-                          color: Colors.redAccent.withOpacity(0.8),
+                          color: Colors.redAccent.withValues(alpha: 0.8),
                           onTap: () => _deleteVehicle(vehicle),
                         ),
                       ],
@@ -717,7 +717,7 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -747,12 +747,12 @@ class _ProfilePageState extends State<ProfilePage> {
             color: AppTheme.backgroundDark,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppTheme.primary.withOpacity(0.5),
+              color: AppTheme.primary.withValues(alpha: 0.5),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.primary.withOpacity(0.2),
+                color: AppTheme.primary.withValues(alpha: 0.2),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -771,7 +771,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   border: Border(
                     bottom: BorderSide(
-                      color: AppTheme.primary.withOpacity(0.2),
+                      color: AppTheme.primary.withValues(alpha: 0.2),
                     ),
                   ),
                 ),
@@ -780,7 +780,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(0.2),
+                        color: AppTheme.primary.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -844,7 +844,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     bottom: Radius.circular(22),
                   ),
                   border: Border(
-                    top: BorderSide(color: AppTheme.primary.withOpacity(0.2)),
+                    top: BorderSide(color: AppTheme.primary.withValues(alpha: 0.2)),
                   ),
                 ),
                 child: SizedBox(
@@ -874,7 +874,7 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, color: AppTheme.primary.withOpacity(0.8), size: 20),
+          Icon(icon, color: AppTheme.primary.withValues(alpha: 0.8), size: 20),
           const SizedBox(width: 12),
           SizedBox(
             width: 100,
@@ -919,12 +919,12 @@ class _ProfilePageState extends State<ProfilePage> {
             color: AppTheme.backgroundDark,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppTheme.primary.withOpacity(0.5),
+              color: AppTheme.primary.withValues(alpha: 0.5),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.primary.withOpacity(0.2),
+                color: AppTheme.primary.withValues(alpha: 0.2),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -943,7 +943,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   border: Border(
                     bottom: BorderSide(
-                      color: AppTheme.primary.withOpacity(0.2),
+                      color: AppTheme.primary.withValues(alpha: 0.2),
                     ),
                   ),
                 ),
@@ -952,7 +952,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(0.2),
+                        color: AppTheme.primary.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -1027,7 +1027,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     bottom: Radius.circular(22),
                   ),
                   border: Border(
-                    top: BorderSide(color: AppTheme.primary.withOpacity(0.2)),
+                    top: BorderSide(color: AppTheme.primary.withValues(alpha: 0.2)),
                   ),
                 ),
                 child: Row(
@@ -1115,12 +1115,12 @@ class _ProfilePageState extends State<ProfilePage> {
         color: AppTheme.backgroundDark,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppTheme.primary.withOpacity(0.4),
+          color: AppTheme.primary.withValues(alpha: 0.4),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -1135,7 +1135,7 @@ class _ProfilePageState extends State<ProfilePage> {
           hintText: hint,
           prefixIcon: Icon(
             icon,
-            color: AppTheme.primary.withOpacity(0.8),
+            color: AppTheme.primary.withValues(alpha: 0.8),
             size: 22,
           ),
           labelStyle: TextStyle(
@@ -1164,14 +1164,14 @@ class _ProfilePageState extends State<ProfilePage> {
           ? BoxDecoration(
               color: Colors.transparent,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: color.withOpacity(0.5), width: 2),
+              border: Border.all(color: color.withValues(alpha: 0.5), width: 2),
             )
           : BoxDecoration(
               color: color,
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: color.withOpacity(0.3),
+                  color: color.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -1220,12 +1220,12 @@ class _ProfilePageState extends State<ProfilePage> {
             color: AppTheme.backgroundDark,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppTheme.primary.withOpacity(0.5),
+              color: AppTheme.primary.withValues(alpha: 0.5),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.primary.withOpacity(0.2),
+                color: AppTheme.primary.withValues(alpha: 0.2),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -1244,7 +1244,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   border: Border(
                     bottom: BorderSide(
-                      color: AppTheme.primary.withOpacity(0.2),
+                      color: AppTheme.primary.withValues(alpha: 0.2),
                     ),
                   ),
                 ),
@@ -1253,7 +1253,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(0.2),
+                        color: AppTheme.primary.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -1328,7 +1328,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     bottom: Radius.circular(22),
                   ),
                   border: Border(
-                    top: BorderSide(color: AppTheme.primary.withOpacity(0.2)),
+                    top: BorderSide(color: AppTheme.primary.withValues(alpha: 0.2)),
                   ),
                 ),
                 child: Row(
@@ -1415,12 +1415,12 @@ class _ProfilePageState extends State<ProfilePage> {
             color: AppTheme.backgroundDark,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: Colors.redAccent.withOpacity(0.5),
+              color: Colors.redAccent.withValues(alpha: 0.5),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.redAccent.withOpacity(0.2),
+                color: Colors.redAccent.withValues(alpha: 0.2),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -1439,7 +1439,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   border: Border(
                     bottom: BorderSide(
-                      color: Colors.redAccent.withOpacity(0.2),
+                      color: Colors.redAccent.withValues(alpha: 0.2),
                     ),
                   ),
                 ),
@@ -1448,7 +1448,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.redAccent.withOpacity(0.2),
+                        color: Colors.redAccent.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -1489,7 +1489,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     bottom: Radius.circular(22),
                   ),
                   border: Border(
-                    top: BorderSide(color: Colors.redAccent.withOpacity(0.2)),
+                    top: BorderSide(color: Colors.redAccent.withValues(alpha: 0.2)),
                   ),
                 ),
                 child: Row(

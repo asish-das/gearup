@@ -103,9 +103,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: Colors.red.withValues(alpha: 0.1),
                           border: Border.all(
-                            color: Colors.red.withOpacity(0.3),
+                            color: Colors.red.withValues(alpha: 0.3),
                           ),
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -234,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
             hintStyle: const TextStyle(color: Colors.white30),
             prefixIcon: Icon(icon, color: Colors.white54),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
+            fillColor: Colors.white.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Colors.white24),

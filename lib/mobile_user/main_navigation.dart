@@ -28,9 +28,9 @@ class _MainNavigationState extends State<MainNavigation> {
       body: _screens[_currentIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: AppTheme.backgroundDark.withOpacity(0.95),
+          color: AppTheme.backgroundDark.withValues(alpha: 0.95),
           border: Border(
-            top: BorderSide(color: AppTheme.primary.withOpacity(0.2)),
+            top: BorderSide(color: AppTheme.primary.withValues(alpha: 0.2)),
           ),
         ),
         child: BottomNavigationBar(

@@ -328,7 +328,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               color: AppTheme.surface,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: AppTheme.primary.withOpacity(0.2),
+                                color: AppTheme.primary.withValues(alpha: 0.2),
                               ),
                             ),
                             child: DropdownButtonHideUnderline(
@@ -409,9 +409,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
+                            color: Colors.red.withValues(alpha: 0.1),
                             border: Border.all(
-                              color: Colors.red.withOpacity(0.3),
+                              color: Colors.red.withValues(alpha: 0.3),
                             ),
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -530,11 +530,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             prefixIcon: icon != null ? Icon(icon, color: Colors.white54) : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppTheme.primary.withOpacity(0.2)),
+              borderSide: BorderSide(color: AppTheme.primary.withValues(alpha: 0.2)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppTheme.primary.withOpacity(0.2)),
+              borderSide: BorderSide(color: AppTheme.primary.withValues(alpha: 0.2)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
