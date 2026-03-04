@@ -143,8 +143,10 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
             return [
               'PENDING',
               'ACCEPTED',
+              'DIAGNOSTICS',
               'IN_PROGRESS',
               'IN SERVICE',
+              'TESTING',
             ].contains(status);
           });
         } catch (e) {
@@ -218,8 +220,12 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
       progressVal = -0.1;
     } else if (status == 'ACCEPTED') {
       progressVal = 0.0;
+    } else if (status == 'DIAGNOSTICS') {
+      progressVal = 0.25;
     } else if (status == 'IN_PROGRESS' || status == 'IN SERVICE') {
       progressVal = 0.5;
+    } else if (status == 'TESTING') {
+      progressVal = 0.75;
     } else if (status == 'COMPLETED') {
       progressVal = 1.0;
     }

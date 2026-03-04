@@ -106,8 +106,10 @@ class _ServiceHistoryScreenState extends State<ServiceHistoryScreen> {
               return [
                 'PENDING',
                 'ACCEPTED',
+                'DIAGNOSTICS',
                 'IN_PROGRESS',
                 'IN SERVICE',
+                'TESTING',
               ].contains(status);
             }).toList();
 

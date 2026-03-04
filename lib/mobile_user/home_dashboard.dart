@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:intl/intl.dart';
 import 'package:gearup/services/auth_service.dart';
 import 'package:gearup/models/user.dart';
 import 'package:gearup/services/vehicle_service.dart';
 import 'package:gearup/models/vehicle.dart';
 import 'package:gearup/mobile_user/service_centers.dart';
-import 'package:gearup/mobile_user/main_navigation.dart';
+import 'package:gearup/mobile_user/service_history.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -78,6 +77,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
         title: Row(
           children: [
             CircleAvatar(
+              radius: 18,
+              backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
               backgroundImage:
                   _currentUser!.profileImageUrl != null &&
                       _currentUser!.profileImageUrl!.isNotEmpty
@@ -86,71 +87,95 @@ class _HomeDashboardState extends State<HomeDashboard> {
               child:
                   (_currentUser!.profileImageUrl == null ||
                       _currentUser!.profileImageUrl!.isEmpty)
-                  ? Icon(Icons.person, color: AppTheme.primary)
+                  ? const Icon(Icons.person, color: AppTheme.primary, size: 20)
                   : null,
             ),
-            const SizedBox(width: 12),
-            Text('GearUp', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: AppTheme.primary),
-            onPressed: () {},
-          ),
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications, color: AppTheme.primary),
-                onPressed: () {},
-              ),
-              Positioned(
-                right: 12,
-                top: 12,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.accent,
-                    shape: BoxShape.circle,
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.surface.withValues(alpha: 0.5),
+            ),
+            child: Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.notifications_none,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                  onPressed: () {},
+                ),
+                Positioned(
+                  right: 12,
+                  top: 12,
+                  child: Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: AppTheme.accent,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Hello, ${_currentUser!.name}!',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              'Good ${DateTime.now().hour < 12
+                  ? 'Morning'
+                  : DateTime.now().hour < 17
+                  ? 'Afternoon'
+                  : 'Evening'}, ${_currentUser!.name.split(' ').first}.',
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'Your Model S is ready for the road.',
-              style: TextStyle(color: Colors.white54, fontSize: 16),
+            const SizedBox(height: 6),
+            Text(
+              _primaryVehicle != null
+                  ? 'Your ${_primaryVehicle!.make} is looking great today.'
+                  : 'Welcome to GearUp.',
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 15,
+                letterSpacing: 0.2,
+              ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             _buildVehicleCard(),
             const SizedBox(height: 32),
             const Text(
               'Quick Actions',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 16),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.none,
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _buildQuickAction(
-                    Icons.calendar_month,
-                    'Book Service',
-                    AppTheme.primary,
+                    Icons.calendar_month_outlined,
+                    'Service',
                     () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -158,39 +183,27 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 20),
                   _buildQuickAction(
-                    Icons.emergency,
-                    'Emergency',
-                    Colors.red,
-                    () => Navigator.pushNamed(context, '/emergency'),
-                  ),
-                  const SizedBox(width: 20),
-                  _buildQuickAction(
-                    Icons.history,
+                    Icons.history_outlined,
                     'History',
-                    AppTheme.primary,
-                    () => Navigator.pushReplacement(
+                    () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const MainNavigation(initialIndex: 3),
+                        builder: (_) => const ServiceHistoryScreen(),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 20),
+                  _buildQuickAction(Icons.near_me_outlined, 'Nearby', () {}),
                   _buildQuickAction(
-                    Icons.location_on,
-                    'Nearby',
-                    AppTheme.primary,
-                    () {},
+                    Icons.emergency_outlined,
+                    'Emergency',
+                    () => Navigator.pushNamed(context, '/emergency'),
+                    isAlert: true,
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 32),
-            _buildInsightCard(),
-            const SizedBox(height: 32),
-            _buildRecentTrip(),
           ],
         ),
       ),
@@ -247,22 +260,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(24),
+        color: AppTheme.surface.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: AppTheme.primary.withValues(alpha: 0.3),
+          color: Colors.white.withValues(alpha: 0.08),
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         child: Stack(
           children: [
             Positioned(
@@ -280,18 +286,18 @@ class _HomeDashboardState extends State<HomeDashboard> {
             Column(
               children: [
                 Container(
-                  height: 140,
+                  height: 160,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(24),
+                      top: Radius.circular(28),
                     ),
                     color: AppTheme.backgroundDark.withValues(alpha: 0.5),
                   ),
                   child: _primaryVehicle!.imageUrl.isNotEmpty
                       ? ClipRRect(
                           borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(24),
+                            top: Radius.circular(28),
                           ),
                           child: CachedNetworkImage(
                             imageUrl: _primaryVehicle!.imageUrl,
@@ -329,59 +335,44 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppTheme.primary.withValues(alpha: 0.2),
+                                color: Colors.white.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: AppTheme.primary.withValues(
-                                    alpha: 0.5,
-                                  ),
-                                ),
                               ),
                               child: Text(
                                 _primaryVehicle!.licensePlate.toUpperCase(),
                                 style: const TextStyle(
-                                  color: AppTheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  letterSpacing: 1.2,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                  letterSpacing: 1.5,
                                 ),
                               ),
                             ),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 8,
+                          vertical: 20,
+                          horizontal: 16,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(16),
+                          color: Colors.white.withValues(alpha: 0.03),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.05),
+                          ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _buildDetailItem(
-                              Icons.business,
-                              'MAKE',
-                              _primaryVehicle!.make,
-                            ),
-                            _buildDetailItem(
-                              Icons.directions_car,
-                              'MODEL',
-                              _primaryVehicle!.model,
-                            ),
-                            _buildDetailItem(
-                              Icons.calendar_today,
-                              'YEAR',
-                              _primaryVehicle!.year,
-                            ),
-                            _buildDetailItem(
-                              Icons.palette,
-                              'COLOR',
-                              _primaryVehicle!.color,
-                            ),
+                            _buildDetailItem('Make', _primaryVehicle!.make),
+                            _buildDetailVerticalDivider(),
+                            _buildDetailItem('Model', _primaryVehicle!.model),
+                            _buildDetailVerticalDivider(),
+                            _buildDetailItem('Year', _primaryVehicle!.year),
+                            _buildDetailVerticalDivider(),
+                            _buildDetailItem('Color', _primaryVehicle!.color),
                           ],
                         ),
                       ),
@@ -396,35 +387,35 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
-  Widget _buildDetailItem(IconData icon, String label, String value) {
+  Widget _buildDetailVerticalDivider() {
+    return Container(
+      height: 30,
+      width: 1,
+      color: Colors.white.withValues(alpha: 0.1),
+    );
+  }
+
+  Widget _buildDetailItem(String label, String value) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.15),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: AppTheme.primary, size: 22),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white54,
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 4),
         Text(
           value.isNotEmpty ? value : '-',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 14,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(
+            color: Colors.white54,
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.5,
           ),
         ),
       ],
@@ -748,203 +739,43 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Widget _buildQuickAction(
     IconData icon,
     String label,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
+    VoidCallback onTap, {
+    bool isAlert = false,
+  }) {
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
       child: Column(
         children: [
           Container(
-            width: 64,
-            height: 64,
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(16),
+              color: isAlert
+                  ? Colors.red.withValues(alpha: 0.1)
+                  : AppTheme.surface.withValues(alpha: 0.7),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isAlert
+                    ? Colors.red.withValues(alpha: 0.3)
+                    : Colors.white.withValues(alpha: 0.05),
+              ),
             ),
-            child: Icon(icon, color: color, size: 32),
+            child: Icon(
+              icon,
+              color: isAlert ? Colors.redAccent : Colors.white,
+              size: 24,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, color: Colors.white),
+            style: TextStyle(
+              fontSize: 12,
+              color: isAlert ? Colors.redAccent : Colors.white70,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildInsightCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.auto_awesome, color: AppTheme.accent, size: 20),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'AI Recommendation',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          RichText(
-            text: const TextSpan(
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-                height: 1.5,
-              ),
-              children: [
-                TextSpan(text: 'Tire pressure in the front-left is down to '),
-                TextSpan(
-                  text: '29 PSI',
-                  style: TextStyle(
-                    color: AppTheme.accent,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextSpan(
-                  text:
-                      '. We recommend stopping at the nearby Shell station (0.5 mi) to inflate.',
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 16,
-            runSpacing: 8,
-            children: [
-              TextButton(
-                onPressed: () {},
-                child: const Text(
-                  'NAVIGATE NOW',
-                  style: TextStyle(
-                    color: AppTheme.accent,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () {},
-                child: const Text(
-                  'DISMISS',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentTrip() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Recent Trip',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            TextButton(
-              onPressed: () {},
-              child: const Text(
-                'View All',
-                style: TextStyle(
-                  color: AppTheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.primary.withValues(alpha: 0.1)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.backgroundDark,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.route, color: AppTheme.primary),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Office to Home',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      '${DateFormat('MM/dd/yyyy').format(DateTime.now().subtract(const Duration(days: 1)))} • 12.4 miles • 28 mins',
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: const [
-                  Text(
-                    '98/100',
-                    style: TextStyle(
-                      color: AppTheme.accent,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  Text(
-                    'SCORE',
-                    style: TextStyle(
-                      color: Colors.white54,
-                      fontSize: 10,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

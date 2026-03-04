@@ -18,28 +18,23 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
       // AppBar
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: AppTheme.backgroundDark.withValues(
-          alpha: 0.8,
-        ), // Instead of withValues(alpha: 0.8), standard transparency handle
+        backgroundColor: Colors.transparent,
         title: const Text(
-          'GearUp Service Centers',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          'Service Centers',
+          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.5),
         ),
         centerTitle: true,
         leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.menu, color: AppTheme.primary, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
           ),
-          onPressed: () {},
+          onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
+            icon: const Icon(Icons.search, color: Colors.white70),
             onPressed: () {},
           ),
         ],
@@ -154,9 +149,13 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isSelected ? AppTheme.primary : const Color(0xFF261933),
-        borderRadius: BorderRadius.circular(12),
-        border: isSelected ? null : Border.all(color: const Color(0xFF4d3267)),
+        color: isSelected
+            ? AppTheme.primary
+            : AppTheme.surface.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: isSelected
+            ? null
+            : Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -164,13 +163,17 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
           Text(
             label,
             style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
+              color: isSelected ? Colors.white : Colors.white70,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
             ),
           ),
           const SizedBox(width: 4),
-          const Icon(Icons.expand_more, color: Colors.white, size: 16),
+          Icon(
+            Icons.expand_more,
+            color: isSelected ? Colors.white : Colors.white70,
+            size: 16,
+          ),
         ],
       ),
     );
@@ -199,9 +202,9 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF261933),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF4d3267)),
+          color: AppTheme.surface.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -264,9 +267,10 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
                             Text(
                               name,
                               style: const TextStyle(
-                                fontSize: 20,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
+                                letterSpacing: -0.5,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -337,7 +341,7 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
-                            vertical: 12,
+                            vertical: 14,
                           ),
                         ),
                         child: const Text(

@@ -189,7 +189,19 @@ class _BookingScreenState extends State<BookingScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        title: const Text('Book Appointment'),
+        title: const Text(
+          'Book Appointment',
+          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.5),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -199,25 +211,23 @@ class _BookingScreenState extends State<BookingScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppTheme.primary.withValues(alpha: 0.2),
-                ),
+                color: AppTheme.surface.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: AppTheme.primary.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                      color: AppTheme.primary.withValues(alpha: 0.1),
                     ),
                     child: const Icon(
-                      Icons.settings,
+                      Icons.settings_outlined,
                       color: AppTheme.primary,
-                      size: 32,
+                      size: 28,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -252,7 +262,7 @@ class _BookingScreenState extends State<BookingScreen> {
               children: [
                 const Text(
                   'Select Date',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
                 TextButton(
                   onPressed: () => _selectDate(context),
@@ -336,15 +346,15 @@ class _BookingScreenState extends State<BookingScreen> {
                               color: isSelected
                                   ? AppTheme.primary
                                   : isUnavailable
-                                  ? Colors.grey.withValues(alpha: 0.1)
-                                  : AppTheme.primary.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(12),
+                                  ? AppTheme.surface.withValues(alpha: 0.2)
+                                  : AppTheme.surface.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: isSelected
                                     ? AppTheme.primary
                                     : isUnavailable
-                                    ? Colors.grey.withValues(alpha: 0.2)
-                                    : AppTheme.primary.withValues(alpha: 0.3),
+                                    ? Colors.transparent
+                                    : Colors.white.withValues(alpha: 0.05),
                               ),
                             ),
                             child: Column(
@@ -392,11 +402,9 @@ class _BookingScreenState extends State<BookingScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppTheme.primary.withValues(alpha: 0.1),
-                ),
+                color: AppTheme.surface.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -19,6 +19,7 @@ class BookingData {
   final String contact;
   final double amount;
   double progressVal;
+  final String? deliveryOption;
 
   BookingData({
     required this.id,
@@ -31,6 +32,7 @@ class BookingData {
     required this.contact,
     required this.amount,
     this.progressVal = 0.0,
+    this.deliveryOption,
   });
 
   factory BookingData.fromMap(Map<String, dynamic> map, String docId) {
@@ -47,6 +49,7 @@ class BookingData {
       contact: map['contact'] ?? 'Unknown Contact',
       amount: (map['amount'] ?? 0.0).toDouble(),
       progressVal: (map['progressVal'] ?? 0.0).toDouble(),
+      deliveryOption: map['deliveryOption'] as String?,
     );
   }
 }
@@ -67,7 +70,9 @@ class _BookingsViewState extends State<BookingsView> {
     'Pending',
     'Rejected',
     'Accepted',
+    'Diagnostics',
     'In Service',
+    'Testing',
     'Completed',
   ];
 
@@ -82,10 +87,17 @@ class _BookingsViewState extends State<BookingsView> {
 
     if (booking.status == 'PENDING') {
       newStatus = 'ACCEPTED';
+      newProgress = 0.0;
     } else if (booking.status == 'ACCEPTED') {
+      newStatus = 'DIAGNOSTICS';
+      newProgress = 0.25;
+    } else if (booking.status == 'DIAGNOSTICS') {
       newStatus = 'IN SERVICE';
-      newProgress = 0.1;
+      newProgress = 0.50;
     } else if (booking.status == 'IN SERVICE') {
+      newStatus = 'TESTING';
+      newProgress = 0.75;
+    } else if (booking.status == 'TESTING') {
       newStatus = 'COMPLETED';
       newProgress = 1.0;
     } else if (booking.status == 'COMPLETED') {
@@ -384,13 +396,12 @@ class _BookingsViewState extends State<BookingsView> {
                     } else if (constraints.maxWidth >= 900) {
                       crossAxisCount = 2;
                     }
-
                     return GridView.builder(
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: crossAxisCount,
                         crossAxisSpacing: 24,
                         mainAxisSpacing: 24,
-                        childAspectRatio: crossAxisCount == 1 ? 2.5 : 1.6,
+                        mainAxisExtent: 440,
                       ),
                       itemCount: filteredBookings.length,
                       itemBuilder: (context, index) {
@@ -631,15 +642,36 @@ class _BookingsViewState extends State<BookingsView> {
         break;
       case 'ACCEPTED':
         statusColor = Colors.blue;
-        actionLabel = 'Start Service';
+        actionLabel = 'Start Diagnostics';
         actionColor = const Color(0xFF0F172A);
         outlinesButton = false;
         bottomRightLabel = 'Status';
         bottomRightValue = 'Scheduled';
         bottomRightColor = Colors.blue;
         break;
+      case 'DIAGNOSTICS':
+        statusColor = Colors.teal;
+        actionLabel = 'Start Service';
+        actionColor = const Color(0xFF0F172A);
+        outlinesButton = false;
+        isHighlighted = true;
+        bottomRightLabel = 'Status';
+        bottomRightValue = 'Diagnosing';
+        bottomRightColor = Colors.teal;
+        break;
       case 'IN SERVICE':
         statusColor = const Color(0xFF5D40D4);
+        actionLabel = 'Start Testing';
+        actionColor = const Color(0xFF10B981); // Green
+        outlinesButton = false;
+        isHighlighted = true;
+        bottomLeftLabel = '';
+        bottomLeftValue = '';
+        bottomRightLabel = '';
+        bottomRightValue = '';
+        break;
+      case 'TESTING':
+        statusColor = Colors.indigo;
         actionLabel = 'Mark Completed';
         actionColor = const Color(0xFF10B981); // Green
         outlinesButton = false;
@@ -721,55 +753,65 @@ class _BookingsViewState extends State<BookingsView> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: statusColor.withValues(alpha: 0.1),
-                        child: Icon(Icons.person, color: statusColor),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          FutureBuilder<DocumentSnapshot>(
-                            future: FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(booking.userId)
-                                .get(),
-                            builder: (context, snapshot) {
-                              String realName = booking.name;
-                              if (snapshot.hasData && snapshot.data!.exists) {
-                                final data =
-                                    snapshot.data!.data()
-                                        as Map<String, dynamic>;
-                                realName =
-                                    data['name'] ??
-                                    data['fullName'] ??
-                                    booking.name;
-                              }
-                              return Text(
-                                realName,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: statusColor.withValues(alpha: 0.1),
+                          child: Icon(Icons.person, color: statusColor),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              FutureBuilder<DocumentSnapshot>(
+                                future: FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(booking.userId)
+                                    .get(),
+                                builder: (context, snapshot) {
+                                  String realName = booking.name;
+                                  if (snapshot.hasData &&
+                                      snapshot.data!.exists) {
+                                    final data =
+                                        snapshot.data!.data()
+                                            as Map<String, dynamic>;
+                                    realName =
+                                        data['name'] ??
+                                        data['fullName'] ??
+                                        booking.name;
+                                  }
+                                  return Text(
+                                    realName,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Booking ID: ${booking.id}',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                                 style: GoogleFonts.manrope(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF0F172A),
+                                  fontSize: 14,
+                                  color: const Color(0xFF94A3B8),
                                 ),
-                              );
-                            },
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Booking ID: ${booking.id}',
-                            style: GoogleFonts.manrope(
-                              fontSize: 14,
-                              color: const Color(0xFF94A3B8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 16),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -900,6 +942,50 @@ class _BookingsViewState extends State<BookingsView> {
                     ),
                   ],
                 ),
+                if (booking.deliveryOption != null) ...[
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Delivery Type',
+                              style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: booking.deliveryOption == 'delivery'
+                                    ? Colors.blue.withValues(alpha: 0.1)
+                                    : Colors.orange.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                booking.deliveryOption!.toUpperCase(),
+                                style: GoogleFonts.manrope(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: booking.deliveryOption == 'delivery'
+                                      ? Colors.blue
+                                      : Colors.orange,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
               const Spacer(),
               if (isHighlighted) ...[

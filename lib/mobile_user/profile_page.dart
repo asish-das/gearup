@@ -155,14 +155,28 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: Colors.transparent,
         automaticallyImplyLeading: false,
         title: Text(
-          'Welcome, ${_currentUser!.name}!',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          'Profile',
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: AppTheme.primary),
-            onPressed: () {},
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.surface.withValues(alpha: 0.5),
+            ),
+            child: IconButton(
+              icon: const Icon(
+                Icons.settings_outlined,
+                color: Colors.white70,
+                size: 22,
+              ),
+              onPressed: () {},
+            ),
           ),
         ],
       ),
@@ -177,10 +191,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppTheme.primary, width: 4),
+                    border: Border.all(
+                      color: AppTheme.primary.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
                   ),
                   child: CircleAvatar(
                     radius: 56,
+                    backgroundColor: AppTheme.surface,
                     backgroundImage:
                         _currentUser!.profileImageUrl != null &&
                             _currentUser!.profileImageUrl!.isNotEmpty
@@ -191,53 +209,67 @@ class _ProfilePageState extends State<ProfilePage> {
                     child:
                         (_currentUser!.profileImageUrl == null ||
                             _currentUser!.profileImageUrl!.isEmpty)
-                        ? Icon(Icons.person, color: AppTheme.primary, size: 32)
+                        ? const Icon(
+                            Icons.person_outline,
+                            color: AppTheme.primary,
+                            size: 40,
+                          )
                         : null,
                   ),
                 ),
                 Positioned(
                   bottom: 0,
                   right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.camera_alt,
+                  child: InkWell(
+                    onTap: _pickImage,
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color: AppTheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt_outlined,
                         color: Colors.white,
                         size: 16,
                       ),
-                      onPressed: _pickImage,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               _currentUser!.name,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
             ),
+            const SizedBox(height: 4),
             Text(
               '${_currentUser!.role.displayName} • Since ${DateTime.now().year}',
-              style: const TextStyle(color: Colors.white54),
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
+            const SizedBox(height: 32),
+            ElevatedButton(
               onPressed: _showEditProfileDialog,
-              icon: const Icon(Icons.edit, color: Colors.white),
-              label: const Text(
-                'Edit Profile',
-                style: TextStyle(color: Colors.white),
-              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
+                backgroundColor: AppTheme.surface.withValues(alpha: 0.8),
+                foregroundColor: Colors.white,
+                elevation: 0,
                 minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                ),
+              ),
+              child: const Text(
+                'Edit Profile',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
                 ),
               ),
             ),
@@ -358,11 +390,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildListTile(IconData icon, String title, String subtitle) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.primary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.1)),
+        color: AppTheme.surface.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: [
@@ -485,27 +517,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildVehicleCard(Vehicle vehicle) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(24),
+        color: AppTheme.surface.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: AppTheme.primary.withValues(alpha: 0.3),
+          color: Colors.white.withValues(alpha: 0.08),
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28),
           child: Stack(
             children: [
               // Decorative background glow
@@ -597,55 +622,23 @@ class _ProfilePageState extends State<ProfilePage> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primary.withValues(
-                                    alpha: 0.2,
-                                  ),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   vehicle.licensePlate,
                                   style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.white70,
+                                    fontSize: 12,
+                                    color: Colors.white,
                                     fontWeight: FontWeight.w600,
-                                    letterSpacing: 1.2,
+                                    letterSpacing: 1.5,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              // Status indicators
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  _buildStatusIndicator(
-                                    vehicle.isConnected
-                                        ? Icons.wifi
-                                        : Icons.wifi_off,
-                                    vehicle.isConnected
-                                        ? 'Connected'
-                                        : 'Offline',
-                                    vehicle.isConnected
-                                        ? AppTheme.accent
-                                        : Colors.redAccent,
-                                    vehicle.isConnected
-                                        ? AppTheme.accent.withValues(
-                                            alpha: 0.15,
-                                          )
-                                        : Colors.redAccent.withValues(
-                                            alpha: 0.15,
-                                          ),
-                                  ),
-                                  _buildStatusIndicator(
-                                    Icons.battery_charging_full,
-                                    vehicle.batteryDisplay,
-                                    AppTheme.primary,
-                                    AppTheme.primary.withValues(alpha: 0.15),
-                                  ),
-                                ],
-                              ),
+                              // Status indicators removed as requested
                             ],
                           ),
                         ),
@@ -716,37 +709,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatusIndicator(
-    IconData icon,
-    String label,
-    Color color,
-    Color backgroundColor,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -832,19 +794,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       Icons.confirmation_number,
                       'License Plate',
                       vehicle.licensePlate,
-                    ),
-                    _buildDetailRow(
-                      Icons.battery_charging_full,
-                      'Battery',
-                      vehicle.batteryDisplay,
-                    ),
-                    _buildDetailRow(
-                      vehicle.isConnected ? Icons.wifi : Icons.wifi_off,
-                      'Status',
-                      vehicle.isConnected ? 'Connected' : 'Disconnected',
-                      valueColor: vehicle.isConnected
-                          ? AppTheme.accent
-                          : Colors.redAccent,
                     ),
                   ],
                 ),

@@ -19,7 +19,22 @@ class ServiceSelectionScreen extends StatelessWidget {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        title: Text(serviceCenterName),
+        title: Text(
+          serviceCenterName,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: serviceCenterId == null
           ? const Center(
@@ -117,23 +132,23 @@ class ServiceSelectionScreen extends StatelessWidget {
           },
         );
       },
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.primary.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+          color: AppTheme.surface.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
+                color: AppTheme.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: AppTheme.primary, size: 28),
+              child: Icon(icon, color: AppTheme.primary, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -143,8 +158,10 @@ class ServiceSelectionScreen extends StatelessWidget {
                   Text(
                     name,
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                       fontSize: 16,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -160,8 +177,8 @@ class ServiceSelectionScreen extends StatelessWidget {
               price,
               style: const TextStyle(
                 color: AppTheme.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
               ),
             ),
           ],
