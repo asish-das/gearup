@@ -65,6 +65,7 @@ class _BookingsViewState extends State<BookingsView> {
   final List<String> _filters = [
     'All',
     'Pending',
+    'Rejected',
     'Accepted',
     'In Service',
     'Completed',
@@ -114,6 +115,24 @@ class _BookingsViewState extends State<BookingsView> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to update status: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _rejectBooking(BookingData booking) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('bookings')
+          .doc(booking.id)
+          .update({'status': 'REJECTED', 'progressVal': 0.0});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to reject: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -630,6 +649,19 @@ class _BookingsViewState extends State<BookingsView> {
         bottomRightLabel = '';
         bottomRightValue = '';
         break;
+      case 'REJECTED':
+        statusColor = Colors.red;
+        actionLabel = 'Rejected';
+        actionColor = Colors.red;
+        outlinesButton = true;
+        bottomLeftLabel = 'Rejected';
+        bottomLeftValue = DateFormat(
+          'MMM dd, hh:mm a',
+        ).format(booking.appointmentDate);
+        bottomRightLabel = '';
+        bottomRightValue = '';
+        bottomRightColor = Colors.red;
+        break;
       case 'COMPLETED':
       default:
         statusColor = Colors.green;
@@ -908,9 +940,38 @@ class _BookingsViewState extends State<BookingsView> {
               ],
               Row(
                 children: [
+                  if (booking.status == 'PENDING') ...[
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _rejectBooking(booking),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: Colors.red),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Reject',
+                              style: GoogleFonts.manrope(
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                  ],
                   Expanded(
                     child: InkWell(
-                      onTap: () => _updateStatus(booking),
+                      onTap: booking.status == 'REJECTED'
+                          ? null
+                          : () => _updateStatus(booking),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         height: 48,
