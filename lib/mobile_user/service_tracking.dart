@@ -125,10 +125,12 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
             final bData = b.data() as Map<String, dynamic>;
             final aDate =
                 (aData['appointmentDate'] as Timestamp?)?.toDate() ??
-                DateTime.now();
+                (aData['createdAt'] as Timestamp?)?.toDate() ??
+                DateTime.fromMillisecondsSinceEpoch(0);
             final bDate =
                 (bData['appointmentDate'] as Timestamp?)?.toDate() ??
-                DateTime.now();
+                (bData['createdAt'] as Timestamp?)?.toDate() ??
+                DateTime.fromMillisecondsSinceEpoch(0);
             return bDate.compareTo(aDate);
           });
 
@@ -137,8 +139,13 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         try {
           activeDoc = sortedDocs.firstWhere((doc) {
             final data = doc.data() as Map<String, dynamic>;
-            final status = data['status'] ?? '';
-            return status == 'PENDING' || status == 'IN_PROGRESS';
+            final status = (data['status'] as String?)?.toUpperCase() ?? '';
+            return [
+              'PENDING',
+              'ACCEPTED',
+              'IN_PROGRESS',
+              'IN SERVICE',
+            ].contains(status);
           });
         } catch (e) {
           // If no active booking found, use the latest one
@@ -204,7 +211,17 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
     final status = data['status'] ?? 'PENDING';
     final vehicle = data['vehicle'] ?? 'Unknown Vehicle';
     final service = data['service'] ?? 'General Service';
-    final progressVal = (data['progressVal'] ?? 0.0).toDouble();
+
+    double progressVal = (data['progressVal'] ?? 0.0).toDouble();
+    if (status == 'PENDING') {
+      progressVal = -0.1;
+    } else if (status == 'ACCEPTED') {
+      progressVal = 0.0;
+    } else if (status == 'IN_PROGRESS' || status == 'IN SERVICE') {
+      progressVal = 0.5;
+    } else if (status == 'COMPLETED') {
+      progressVal = 1.0;
+    }
 
     final isRejected = status == 'REJECTED';
     final isCompleted = status == 'COMPLETED';
@@ -467,6 +484,8 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         ? 'Service successfully completed!'
                         : status == 'PENDING'
                         ? 'Your service is pending confirmation by the service center.'
+                        : status == 'ACCEPTED'
+                        ? 'Your service has been approved by the service center.'
                         : 'Service is currently progressing at ${(progressVal * 100).toInt()}%',
                     style: const TextStyle(
                       color: Colors.white54,
