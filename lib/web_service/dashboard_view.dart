@@ -43,47 +43,40 @@ class DashboardView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Welcome back, John's Garage",
-                style: GoogleFonts.manrope(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF0F172A),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              bool isSmall = constraints.maxWidth < 900;
+
+              Widget searchBar = Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ),
-              Row(
-                children: [
-                  Container(
-                    height: 48,
-                    width: 350,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 16),
-                        const Icon(Icons.search, color: Color(0xFF94A3B8)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText:
-                                  'Search customer, vehicle or invoice...',
-                              hintStyle: GoogleFonts.manrope(
-                                color: const Color(0xFF94A3B8),
-                                fontSize: 14,
-                              ),
-                              border: InputBorder.none,
-                            ),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 16),
+                    const Icon(Icons.search, color: Color(0xFF94A3B8)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Search customer, vehicle or invoice...',
+                          hintStyle: GoogleFonts.manrope(
+                            color: const Color(0xFF94A3B8),
+                            fontSize: 14,
                           ),
+                          border: InputBorder.none,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
+                ),
+              );
+
+              Widget searchAndProfile = Row(
+                children: [
+                  Expanded(child: searchBar),
                   const SizedBox(width: 24),
                   Stack(
                     children: [
@@ -113,52 +106,113 @@ class DashboardView extends StatelessWidget {
                     child: Icon(Icons.person, color: Color(0xFF64748B)),
                   ),
                 ],
-              ),
-            ],
+              );
+
+              Widget titleText = Text(
+                "Welcome back, John's Garage",
+                style: GoogleFonts.manrope(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0F172A),
+                ),
+              );
+
+              return isSmall
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        titleText,
+                        const SizedBox(height: 16),
+                        searchAndProfile,
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        titleText,
+                        SizedBox(width: 450, child: searchAndProfile),
+                      ],
+                    );
+            },
           ),
           const SizedBox(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cards = [
+                _buildStatCard(
                   'Today\'s Bookings',
                   '8',
                   '+5%',
                   Icons.calendar_today,
                   Colors.purple,
                 ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: _buildStatCard(
+                _buildStatCard(
                   'Pending Bookings',
                   '3',
                   '-2%',
                   Icons.pending_actions,
                   Colors.orange,
                 ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: _buildStatCard(
+                _buildStatCard(
                   'Completed Services',
                   '12',
                   '+10%',
                   Icons.check_circle_outline,
                   Colors.teal,
                 ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: _buildStatCard(
+                _buildStatCard(
                   'Total Revenue',
                   '\$1,240',
                   '+15%',
                   Icons.attach_money,
                   Colors.green,
                 ),
-              ),
-            ],
+              ];
+
+              if (constraints.maxWidth < 600) {
+                return Column(
+                  children: cards
+                      .map(
+                        (c) => Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: c,
+                        ),
+                      )
+                      .toList(),
+                );
+              } else if (constraints.maxWidth < 1100) {
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: cards[0]),
+                        const SizedBox(width: 16),
+                        Expanded(child: cards[1]),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: cards[2]),
+                        const SizedBox(width: 16),
+                        Expanded(child: cards[3]),
+                      ],
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: cards[0]),
+                  const SizedBox(width: 24),
+                  Expanded(child: cards[1]),
+                  const SizedBox(width: 24),
+                  Expanded(child: cards[2]),
+                  const SizedBox(width: 24),
+                  Expanded(child: cards[3]),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 32),
           Expanded(
