@@ -247,7 +247,7 @@ class BookingsManagerView extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Oct 01 - Oct 31',
+                  '${DateFormat('MMM dd').format(DateTime(DateTime.now().year, DateTime.now().month, 1))} - ${DateFormat('MMM dd').format(DateTime(DateTime.now().year, DateTime.now().month + 1, 0))}',
                   style: GoogleFonts.manrope(
                     color: const Color(0xFF0F172A),
                     fontWeight: FontWeight.bold,
