@@ -270,9 +270,11 @@ class _ServiceCentersViewState extends State<ServiceCentersView> {
                         .collection('users')
                         .where('role', isEqualTo: 'serviceCenter')
                         .get();
-                    final usersList = snapshot.docs
-                        .map((doc) => User.fromMap(doc.data()))
-                        .toList();
+                    final usersList = snapshot.docs.map((doc) {
+                      var data = doc.data();
+                      data['uid'] = doc.id;
+                      return User.fromMap(data);
+                    }).toList();
                     String filePath = await ExportService.exportToPDF(
                       usersList,
                       [],
@@ -309,9 +311,11 @@ class _ServiceCentersViewState extends State<ServiceCentersView> {
                         .collection('users')
                         .where('role', isEqualTo: 'serviceCenter')
                         .get();
-                    final usersList = snapshot.docs
-                        .map((doc) => User.fromMap(doc.data()))
-                        .toList();
+                    final usersList = snapshot.docs.map((doc) {
+                      var data = doc.data();
+                      data['uid'] = doc.id;
+                      return User.fromMap(data);
+                    }).toList();
                     String filePath = await ExportService.exportToCSV(
                       usersList,
                       [],
@@ -348,9 +352,11 @@ class _ServiceCentersViewState extends State<ServiceCentersView> {
                         .collection('users')
                         .where('role', isEqualTo: 'serviceCenter')
                         .get();
-                    final usersList = snapshot.docs
-                        .map((doc) => User.fromMap(doc.data()))
-                        .toList();
+                    final usersList = snapshot.docs.map((doc) {
+                      var data = doc.data();
+                      data['uid'] = doc.id;
+                      return User.fromMap(data);
+                    }).toList();
                     String filePath = await ExportService.exportToText(
                       usersList,
                       [],
@@ -698,9 +704,11 @@ class _ServiceCentersViewState extends State<ServiceCentersView> {
         }
 
         final docs = snapshot.data!.docs;
-        final users = docs
-            .map((doc) => User.fromMap(doc.data() as Map<String, dynamic>))
-            .toList();
+        final users = docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['uid'] = doc.id;
+          return User.fromMap(data);
+        }).toList();
 
         final tabCounts = [
           users.length,

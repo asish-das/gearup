@@ -487,7 +487,7 @@ class DashboardView extends StatelessWidget {
           children: [
             Container(
               width: 16,
-              height: values[index] * 2.5,
+              height: values[index] * 2.0, // Reduced height to prevent overflow
               decoration: BoxDecoration(
                 color: highlight
                     ? const Color(0xFF5D40D4)
@@ -495,7 +495,7 @@ class DashboardView extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8), // Reduced spacing
             Text(
               labels[index],
               style: GoogleFonts.manrope(

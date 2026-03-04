@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 enum UserRole {
   vehicleOwner('Vehicle Owner'),
   serviceCenter('Service Center'),
@@ -17,6 +19,7 @@ class User {
   final String? businessName;
   final String? status;
   final String? createdAt;
+  final String? address;
 
   User({
     required this.uid,
@@ -28,6 +31,7 @@ class User {
     this.businessName,
     this.status,
     this.createdAt,
+    this.address,
   });
 
   factory User.fromMap(Map<String, dynamic> map) {
@@ -37,13 +41,17 @@ class User {
       name: map['name'] ?? '',
       role: UserRole.values.firstWhere(
         (role) => role.name == map['role'],
-        orElse: () => UserRole.vehicleOwner,
+        orElse: () {
+          debugPrint('Unknown role: ${map['role']}');
+          return UserRole.vehicleOwner;
+        },
       ),
       phoneNumber: map['phoneNumber'],
       profileImageUrl: map['profileImageUrl'],
       businessName: map['businessName'],
       status: map['status'],
       createdAt: map['createdAt'],
+      address: map['address'],
     );
   }
 
@@ -58,6 +66,7 @@ class User {
       'businessName': businessName,
       'status': status,
       'createdAt': createdAt,
+      'address': address,
     };
   }
 }

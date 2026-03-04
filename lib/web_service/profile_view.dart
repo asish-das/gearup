@@ -1,11 +1,207 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class ProfileView extends StatelessWidget {
+class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
 
   @override
+  State<ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<ProfileView> {
+  final _garageNameController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+
+  bool _isLoading = true;
+
+  final Map<String, Map<String, dynamic>> _operatingHours = {
+    'Monday': {'isOpen': true, 'open': '08:00 AM', 'close': '06:00 PM'},
+    'Tuesday': {'isOpen': true, 'open': '08:00 AM', 'close': '06:00 PM'},
+    'Wednesday': {'isOpen': true, 'open': '08:00 AM', 'close': '06:00 PM'},
+    'Thursday': {'isOpen': true, 'open': '08:00 AM', 'close': '06:00 PM'},
+    'Friday': {'isOpen': true, 'open': '08:00 AM', 'close': '06:00 PM'},
+    'Saturday': {'isOpen': false, 'open': '08:00 AM', 'close': '06:00 PM'},
+    'Sunday': {'isOpen': false, 'open': '08:00 AM', 'close': '06:00 PM'},
+  };
+
+  final Map<String, String> _serviceCategoryDesc = {
+    'Mechanic': 'General repairs, engines',
+    'Wash & Detail': 'Interior & exterior cleaning',
+    'Tire Shop': 'Alignment & replacement',
+    'Electrical': 'Diagnostics & wiring',
+    'Oil & Fluids': 'Fast maintenance',
+    'Body Shop': 'Paint & collision repair',
+  };
+
+  final Map<String, bool> _serviceCategories = {
+    'Mechanic': false,
+    'Wash & Detail': false,
+    'Tire Shop': false,
+    'Electrical': false,
+    'Oil & Fluids': false,
+    'Body Shop': false,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        if (mounted) {
+          setState(() {
+            _garageNameController.text = data['businessName'] ?? '';
+            _addressController.text = data['address'] ?? '';
+            _emailController.text = data['email'] ?? '';
+            _phoneController.text = data['phoneNumber'] ?? '';
+
+            if (data['operatingHours'] != null) {
+              final hours = data['operatingHours'] as Map<String, dynamic>;
+              hours.forEach((key, value) {
+                if (_operatingHours.containsKey(key)) {
+                  _operatingHours[key] = Map<String, dynamic>.from(value);
+                }
+              });
+            }
+
+            if (data['serviceCategories'] != null) {
+              final cats = data['serviceCategories'] as Map<String, dynamic>;
+              cats.forEach((key, value) {
+                if (_serviceCategories.containsKey(key)) {
+                  _serviceCategories[key] = value as bool;
+                }
+              });
+            }
+            _isLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading profile: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'businessName': _garageNameController.text.trim(),
+        'address': _addressController.text.trim(),
+        'phoneNumber': _phoneController.text.trim(),
+        // Cannot update auth email safely here, just contact email optionally:
+        'email': _emailController.text.trim(),
+        'operatingHours': _operatingHours,
+        'serviceCategories': _serviceCategories,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Settings saved successfully.'),
+            backgroundColor: Color(0xFF10B981),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving settings: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _garageNameController.dispose();
+    _addressController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickTime(String day, bool isOpeningTime) async {
+    final currentTimeStr = isOpeningTime
+        ? _operatingHours[day]!['open'] as String
+        : _operatingHours[day]!['close'] as String;
+
+    TimeOfDay initialTime = TimeOfDay.now();
+    try {
+      if (currentTimeStr.isNotEmpty) {
+        final isPM = currentTimeStr.contains('PM');
+        final parts = currentTimeStr.split(RegExp(r'[: ]'));
+        if (parts.length >= 2) {
+          int hour = int.parse(parts[0]);
+          int minute = int.parse(parts[1]);
+          if (isPM && hour != 12) hour += 12;
+          if (!isPM && hour == 12) hour = 0;
+          initialTime = TimeOfDay(hour: hour, minute: minute);
+        }
+      }
+    } catch (_) {}
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+
+    if (picked != null && mounted) {
+      setState(() {
+        final formattedTime = picked.format(context);
+        if (isOpeningTime) {
+          _operatingHours[day]!['open'] = formattedTime;
+        } else {
+          _operatingHours[day]!['close'] = formattedTime;
+        }
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Container(
       color: const Color(0xFFF6F6F8),
       padding: const EdgeInsets.all(32.0),
@@ -89,11 +285,6 @@ class ProfileView extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFFCBD5E1),
-                                style: BorderStyle
-                                    .none, // Dotted in design, simple none here
-                              ),
                             ),
                             child: const Icon(
                               Icons.image,
@@ -120,12 +311,24 @@ class ProfileView extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Text(
-                                'UPLOAD NEW',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF5D40D4),
+                              GestureDetector(
+                                onTap: () {
+                                  // TODO: Implement image upload
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Image upload coming soon!',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'UPLOAD NEW',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF5D40D4),
+                                  ),
                                 ),
                               ),
                             ],
@@ -133,26 +336,24 @@ class ProfileView extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 32),
-                      _buildTextField('Garage Name', 'GearUp Service Center'),
+                      _buildTextField('Garage Name', _garageNameController),
                       const SizedBox(height: 24),
-                      _buildTextField(
-                        'Business Address',
-                        '123 Mechanic St, Auto City',
-                      ),
+                      _buildTextField('Business Address', _addressController),
                       const SizedBox(height: 24),
                       Row(
                         children: [
                           Expanded(
                             child: _buildTextField(
                               'Contact Email',
-                              'contact@gearup.com',
+                              _emailController,
+                              enabled: false,
                             ),
                           ),
                           const SizedBox(width: 24),
                           Expanded(
                             child: _buildTextField(
                               'Phone Number',
-                              '+1 (555) 123-4567',
+                              _phoneController,
                             ),
                           ),
                         ],
@@ -230,13 +431,16 @@ class ProfileView extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      _buildHoursRow('Monday', true),
-                      _buildHoursRow('Tuesday', true),
-                      _buildHoursRow('Wednesday', true),
-                      _buildHoursRow('Thursday', true),
-                      _buildHoursRow('Friday', true),
-                      _buildHoursRow('Saturday', false),
-                      _buildHoursRow('Sunday', false),
+                      for (String day in [
+                        'Monday',
+                        'Tuesday',
+                        'Wednesday',
+                        'Thursday',
+                        'Friday',
+                        'Saturday',
+                        'Sunday',
+                      ])
+                        _buildHoursRow(day),
                     ],
                   ),
                 ),
@@ -288,61 +492,25 @@ class ProfileView extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Expanded(
-                            child: _buildCategoryCard(
-                              'Mechanic',
-                              'General repairs, engines',
-                              true,
-                            ),
-                          ),
+                          Expanded(child: _buildCategoryCard('Mechanic')),
                           const SizedBox(width: 24),
-                          Expanded(
-                            child: _buildCategoryCard(
-                              'Wash & Detail',
-                              'Interior & exterior cleaning',
-                              true,
-                            ),
-                          ),
+                          Expanded(child: _buildCategoryCard('Wash & Detail')),
                         ],
                       ),
                       const SizedBox(height: 24),
                       Row(
                         children: [
-                          Expanded(
-                            child: _buildCategoryCard(
-                              'Tire Shop',
-                              'Alignment & replacement',
-                              false,
-                            ),
-                          ),
+                          Expanded(child: _buildCategoryCard('Tire Shop')),
                           const SizedBox(width: 24),
-                          Expanded(
-                            child: _buildCategoryCard(
-                              'Electrical',
-                              'Diagnostics & wiring',
-                              false,
-                            ),
-                          ),
+                          Expanded(child: _buildCategoryCard('Electrical')),
                         ],
                       ),
                       const SizedBox(height: 24),
                       Row(
                         children: [
-                          Expanded(
-                            child: _buildCategoryCard(
-                              'Oil & Fluids',
-                              'Fast maintenance',
-                              true,
-                            ),
-                          ),
+                          Expanded(child: _buildCategoryCard('Oil & Fluids')),
                           const SizedBox(width: 24),
-                          Expanded(
-                            child: _buildCategoryCard(
-                              'Body Shop',
-                              'Paint & collision repair',
-                              false,
-                            ),
-                          ),
+                          Expanded(child: _buildCategoryCard('Body Shop')),
                         ],
                       ),
                     ],
@@ -359,41 +527,52 @@ class ProfileView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Cancel Changes',
-                  style: GoogleFonts.manrope(
-                    color: const Color(0xFF0F172A),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _isLoading = true;
+                  });
+                  _loadProfile();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Cancel Changes',
+                    style: GoogleFonts.manrope(
+                      color: const Color(0xFF0F172A),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF5D40D4),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Save All Settings',
-                  style: GoogleFonts.manrope(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+              InkWell(
+                onTap: () => _saveProfile(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF5D40D4),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Save All Settings',
+                    style: GoogleFonts.manrope(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ),
@@ -404,7 +583,11 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(String label, String value) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    bool enabled = true,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -418,17 +601,24 @@ class ProfileView extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
+            color: enabled ? const Color(0xFFF8FAFC) : const Color(0xFFE2E8F0),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
-          child: Text(
-            value,
+          child: TextField(
+            controller: controller,
+            enabled: enabled,
             style: GoogleFonts.manrope(
               fontSize: 14,
               color: const Color(0xFF0F172A),
+            ),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
             ),
           ),
         ),
@@ -445,7 +635,9 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildHoursRow(String day, bool isOpen) {
+  Widget _buildHoursRow(String day) {
+    bool isOpen = _operatingHours[day]!['isOpen'] as bool;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
       child: Row(
@@ -463,21 +655,19 @@ class ProfileView extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
-            flex: 2,
-            child: _buildTimePicker(isOpen ? '08:00 AM' : '12:00 AM', isOpen),
-          ),
-          Expanded(
-            flex: 2,
-            child: _buildTimePicker(isOpen ? '06:00 PM' : '12:00 AM', isOpen),
-          ),
+          Expanded(flex: 2, child: _buildTimePicker(day, true, isOpen)),
+          Expanded(flex: 2, child: _buildTimePicker(day, false, isOpen)),
           Expanded(
             flex: 1,
             child: Align(
               alignment: Alignment.centerRight,
               child: Switch(
                 value: isOpen,
-                onChanged: (v) {},
+                onChanged: (v) {
+                  setState(() {
+                    _operatingHours[day]!['isOpen'] = v;
+                  });
+                },
                 activeThumbColor: const Color(0xFF5D40D4),
               ),
             ),
@@ -487,84 +677,112 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildTimePicker(String time, bool isActive) {
-    return Container(
-      margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isActive ? const Color(0xFFF8FAFC) : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        border: isActive
-            ? Border.all(color: const Color(0xFFE2E8F0))
-            : Border.all(color: Colors.transparent),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            time,
-            style: GoogleFonts.manrope(
-              fontSize: 14,
-              color: isActive
-                  ? const Color(0xFF0F172A)
-                  : const Color(0xFF94A3B8),
+  Widget _buildTimePicker(String day, bool isOpeningTime, bool isActive) {
+    String time = isOpeningTime
+        ? _operatingHours[day]!['open'] as String
+        : _operatingHours[day]!['close'] as String;
+
+    return InkWell(
+      onTap: isActive ? () => _pickTime(day, isOpeningTime) : null,
+      child: Container(
+        margin: const EdgeInsets.only(right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFF8FAFC) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: isActive
+              ? Border.all(color: const Color(0xFFE2E8F0))
+              : Border.all(color: Colors.transparent),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              time,
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                color: isActive
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFF94A3B8),
+              ),
             ),
-          ),
-          if (isActive)
-            const Icon(Icons.access_time, size: 16, color: Color(0xFF64748B)),
-        ],
+            if (isActive)
+              const Icon(Icons.access_time, size: 16, color: Color(0xFF64748B)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildCategoryCard(String title, String subtitle, bool isSelected) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isSelected ? const Color(0xFF5D40D4) : const Color(0xFFE2E8F0),
-          width: isSelected ? 2 : 1,
+  Widget _buildCategoryCard(String title) {
+    bool isSelected = _serviceCategories[title] ?? false;
+    String subtitle = _serviceCategoryDesc[title] ?? '';
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _serviceCategories[title] = !isSelected;
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF5D40D4)
+                : const Color(0xFFE2E8F0),
+            width: isSelected ? 2 : 1,
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF5D40D4) : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-              border: isSelected
-                  ? null
-                  : Border.all(color: const Color(0xFFCBD5E1)),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFF5D40D4)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+                border: isSelected
+                    ? null
+                    : Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  : const SizedBox(width: 16, height: 16),
             ),
-            child: isSelected
-                ? const Icon(Icons.check, size: 16, color: Colors.white)
-                : const SizedBox(width: 16, height: 16),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.manrope(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF0F172A),
-                ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.manrope(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF0F172A),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: const Color(0xFF64748B),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              Text(
-                subtitle,
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  color: const Color(0xFF64748B),
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
+import 'dart:async';
 import '../models/user.dart';
 import '../models/vehicle.dart';
 import '../services/export_service.dart';
@@ -18,82 +19,103 @@ class _VehicleOwnersViewState extends State<VehicleOwnersView> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<User> _users = [];
   List<Vehicle> _vehicles = [];
-  bool _isLoading = true;
   String _searchQuery = '';
   int _selectedTabIndex = 0;
   final List<String> _tabs = ['All Owners', 'Active', 'Suspended'];
   String _selectedRegistration = 'Recent';
-
-  List<User> get _filteredUsers {
-    List<User> filtered = _users.where((user) {
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
-        final nameMatches = user.name.toLowerCase().contains(query);
-        final emailMatches = user.email.toLowerCase().contains(query);
-        final phoneMatches = (user.phoneNumber ?? '').toLowerCase().contains(
-          query,
-        );
-        if (!nameMatches && !emailMatches && !phoneMatches) {
-          return false;
-        }
-      }
-
-      if (_selectedTabIndex != 0) {
-        final currentStatus = (user.status ?? 'active').toLowerCase();
-        if (_selectedTabIndex == 1 && currentStatus != 'active') {
-          return false;
-        }
-        if (_selectedTabIndex == 2 && currentStatus != 'suspended') {
-          return false;
-        }
-      }
-      return true;
-    }).toList();
-
-    if (_selectedRegistration == 'Oldest') {
-      filtered = filtered.reversed.toList();
-    }
-    return filtered;
-  }
+  StreamSubscription<QuerySnapshot>? _usersSubscription;
+  StreamSubscription<QuerySnapshot>? _vehiclesSubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _setupRealtimeListeners();
   }
 
-  Future<void> _loadData() async {
-    try {
-      // Load users
-      QuerySnapshot userSnapshot = await _firestore
-          .collection('users')
-          .where('role', isEqualTo: 'vehicleOwner')
-          .get();
+  @override
+  void dispose() {
+    _usersSubscription?.cancel();
+    _vehiclesSubscription?.cancel();
+    super.dispose();
+  }
 
-      List<User> users = userSnapshot.docs
-          .map((doc) => User.fromMap(doc.data() as Map<String, dynamic>))
-          .toList();
+  void _setupRealtimeListeners() {
+    // Real-time users listener
+    _usersSubscription = _firestore
+        .collection('users')
+        .where('role', isEqualTo: 'vehicleOwner')
+        .snapshots()
+        .listen(
+          (QuerySnapshot snapshot) {
+            List<User> users = snapshot.docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              data['uid'] = doc.id;
+              return User.fromMap(data);
+            }).toList();
 
-      // Load vehicles
-      QuerySnapshot vehicleSnapshot = await _firestore
-          .collection('vehicles')
-          .get();
+            // Sort locally in descending order by createdAt
+            users.sort((a, b) {
+              final aDate = a.createdAt ?? '';
+              final bDate = b.createdAt ?? '';
+              return bDate.compareTo(aDate);
+            });
 
-      List<Vehicle> vehicles = vehicleSnapshot.docs
-          .map((doc) => Vehicle.fromMap(doc.data() as Map<String, dynamic>))
-          .toList();
+            if (mounted) {
+              setState(() {
+                _users = users;
+              });
+            }
+          },
+          onError: (error) {
+            debugPrint('Error listening to users: $error');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Error loading users: $error',
+                    style: GoogleFonts.manrope(),
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        );
 
-      setState(() {
-        _users = users;
-        _vehicles = vehicles;
-        _isLoading = false;
-      });
-    } catch (e) {
-      debugPrint('Error loading data: $e');
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    // Real-time vehicles listener
+    _vehiclesSubscription = _firestore
+        .collection('vehicles')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .listen(
+          (QuerySnapshot snapshot) {
+            List<Vehicle> vehicles = snapshot.docs
+                .map(
+                  (doc) => Vehicle.fromMap(doc.data() as Map<String, dynamic>),
+                )
+                .toList();
+
+            if (mounted) {
+              setState(() {
+                _vehicles = vehicles;
+              });
+            }
+          },
+          onError: (error) {
+            debugPrint('Error listening to vehicles: $error');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Error loading vehicles: $error',
+                    style: GoogleFonts.manrope(),
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        );
   }
 
   void _showExportDialog() {
@@ -403,67 +425,133 @@ class _VehicleOwnersViewState extends State<VehicleOwnersView> {
               const SizedBox(height: 24),
               // Table Area
               Expanded(
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF5D40D4),
-                        ),
-                      )
-                    : _filteredUsers.isEmpty
-                    ? _buildEmptyState()
-                    : Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: LayoutBuilder(
-                          builder: (context, tableConstraints) {
-                            return SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  minWidth: 1000,
-                                ),
-                                child: SizedBox(
-                                  width: tableConstraints.maxWidth > 1000
-                                      ? tableConstraints.maxWidth
-                                      : 1000,
-                                  child: Column(
-                                    children: [
-                                      _buildTableHeader(),
-                                      Expanded(
-                                        child: ListView.builder(
-                                          itemCount: _filteredUsers.length,
-                                          itemBuilder: (context, index) {
-                                            final user = _filteredUsers[index];
-                                            final userVehicles = _vehicles
-                                                .where(
-                                                  (v) => v.userId == user.uid,
-                                                )
-                                                .toList();
-                                            return _buildUserTableRow(
-                                              user,
-                                              userVehicles,
-                                            );
-                                          },
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: _usersSubscription != null
+                      ? FirebaseFirestore.instance
+                            .collection('users')
+                            .where('role', isEqualTo: 'vehicleOwner')
+                            .snapshots()
+                      : Stream.empty(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return const Center(child: Text('Something went wrong'));
+                    }
+
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasData) {
+                      final docs = snapshot.data!.docs;
+                      final users = docs.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        data['uid'] = doc.id;
+                        return User.fromMap(data);
+                      }).toList();
+
+                      // Sort users locally
+                      users.sort((a, b) {
+                        final aDate = a.createdAt ?? '';
+                        final bDate = b.createdAt ?? '';
+                        return bDate.compareTo(aDate);
+                      });
+
+                      List<User> filteredUsers = users;
+                      if (_selectedTabIndex == 1) {
+                        filteredUsers = users
+                            .where((u) => u.status == 'active')
+                            .toList();
+                      } else if (_selectedTabIndex == 2) {
+                        filteredUsers = users
+                            .where((u) => u.status == 'suspended')
+                            .toList();
+                      }
+
+                      if (_searchQuery.isNotEmpty) {
+                        final query = _searchQuery.toLowerCase();
+                        filteredUsers = filteredUsers.where((user) {
+                          final nameMatches = user.name.toLowerCase().contains(
+                            query,
+                          );
+                          final emailMatches = user.email
+                              .toLowerCase()
+                              .contains(query);
+                          final phoneMatches = (user.phoneNumber ?? '')
+                              .toLowerCase()
+                              .contains(query);
+                          return nameMatches || emailMatches || phoneMatches;
+                        }).toList();
+                      }
+
+                      if (_selectedRegistration == 'Oldest') {
+                        filteredUsers = filteredUsers.reversed.toList();
+                      }
+
+                      return Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.02),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: LayoutBuilder(
+                            builder: (context, tableConstraints) {
+                              return SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 1000,
+                                  ),
+                                  child: SizedBox(
+                                    width: tableConstraints.maxWidth > 1000
+                                        ? tableConstraints.maxWidth
+                                        : 1000,
+                                    child: Column(
+                                      children: [
+                                        _buildTableHeader(),
+                                        Expanded(
+                                          child: ListView.builder(
+                                            itemCount: filteredUsers.length,
+                                            itemBuilder: (context, index) {
+                                              final user = filteredUsers[index];
+                                              final userVehicles = _vehicles
+                                                  .where(
+                                                    (v) => v.userId == user.uid,
+                                                  )
+                                                  .toList();
+                                              return _buildUserTableRow(
+                                                user,
+                                                userVehicles,
+                                              );
+                                            },
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
-                      ),
+                      );
+                    }
+
+                    // Show empty state when no data
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return _buildEmptyState();
+                    }
+
+                    return const Center(child: Text('No data available'));
+                  },
+                ),
               ),
             ],
           ),
@@ -819,7 +907,7 @@ class _VehicleOwnersViewState extends State<VehicleOwnersView> {
 
       await _firestore.collection('users').doc(user.uid).update({
         'status': newStatus,
-        'updatedAt': DateTime.now().toIso8601String(),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       if (!mounted) return;
@@ -835,7 +923,7 @@ class _VehicleOwnersViewState extends State<VehicleOwnersView> {
         ),
       );
 
-      _loadData(); // Refresh data
+      // Data is now updated in real-time via listeners
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -936,7 +1024,7 @@ class _VehicleOwnersViewState extends State<VehicleOwnersView> {
           ),
         );
 
-        _loadData(); // Refresh data
+        // Data is now updated in real-time via listeners
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

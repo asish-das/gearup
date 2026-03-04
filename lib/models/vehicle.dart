@@ -9,6 +9,8 @@ class Vehicle {
   final double batteryLevel;
   final bool isConnected;
   final String userId;
+  final String? createdAt;
+  final String? updatedAt;
 
   Vehicle({
     required this.id,
@@ -21,6 +23,8 @@ class Vehicle {
     this.batteryLevel = 0.0,
     this.isConnected = false,
     required this.userId,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory Vehicle.fromMap(Map<String, dynamic> map) {
@@ -35,6 +39,8 @@ class Vehicle {
       batteryLevel: (map['batteryLevel'] ?? 0.0).toDouble(),
       isConnected: map['isConnected'] ?? false,
       userId: map['userId'] ?? '',
+      createdAt: map['createdAt'],
+      updatedAt: map['updatedAt'],
     );
   }
 
@@ -50,8 +56,8 @@ class Vehicle {
       'batteryLevel': batteryLevel,
       'isConnected': isConnected,
       'userId': userId,
-      'createdAt': DateTime.now().toIso8601String(),
-      'updatedAt': DateTime.now().toIso8601String(),
+      'createdAt': createdAt ?? DateTime.now().toIso8601String(),
+      'updatedAt': updatedAt ?? DateTime.now().toIso8601String(),
     };
   }
 

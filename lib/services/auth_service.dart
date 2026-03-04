@@ -87,7 +87,9 @@ class AuthService {
           .doc(uid)
           .get();
       if (doc.exists) {
-        return User.fromMap(doc.data() as Map<String, dynamic>);
+        final data = doc.data() as Map<String, dynamic>;
+        data['uid'] = doc.id;
+        return User.fromMap(data);
       } else {
         throw 'User not found';
       }
