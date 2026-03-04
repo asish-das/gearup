@@ -311,7 +311,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         children: [
                           Expanded(
                             child: Text(
-                              _primaryVehicle!.displayName,
+                              _primaryVehicle!.model.toUpperCase(),
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
