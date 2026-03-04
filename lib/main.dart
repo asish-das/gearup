@@ -171,10 +171,12 @@ class _GearUpAppState extends State<GearUpApp> {
             );
           case '/booking':
             return MaterialPageRoute(
+              settings: settings,
               builder: (context) => const BookingScreen(),
             );
           case '/service_selection':
             return MaterialPageRoute(
+              settings: settings,
               builder: (context) => const ServiceSelectionScreen(),
             );
           case '/emergency':

@@ -3,9 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:printing/printing.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 class BookingData {
   final String id;
+  final String userId;
   final String name;
   String status;
   final String vehicle;
@@ -17,6 +22,7 @@ class BookingData {
 
   BookingData({
     required this.id,
+    required this.userId,
     required this.name,
     required this.status,
     required this.vehicle,
@@ -30,7 +36,8 @@ class BookingData {
   factory BookingData.fromMap(Map<String, dynamic> map, String docId) {
     return BookingData(
       id: docId,
-      name: map['name'] ?? 'Unknown',
+      userId: map['userId'] ?? '',
+      name: map['name'] ?? map['customerName'] ?? 'Unknown',
       status: map['status'] ?? 'PENDING',
       vehicle: map['vehicle'] ?? 'Unknown Vehicle',
       service: map['service'] ?? 'General Service',
@@ -89,6 +96,7 @@ class _BookingsViewState extends State<BookingsView> {
           ),
         );
       }
+      _printReceipt(booking);
       return;
     }
 
@@ -97,6 +105,10 @@ class _BookingsViewState extends State<BookingsView> {
           .collection('bookings')
           .doc(booking.id)
           .update({'status': newStatus, 'progressVal': newProgress});
+
+      if (newStatus == 'COMPLETED') {
+        _printReceipt(booking);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -107,6 +119,179 @@ class _BookingsViewState extends State<BookingsView> {
         );
       }
     }
+  }
+
+  Future<void> _printReceipt(BookingData booking) async {
+    String realCustomerName = booking.name;
+    try {
+      if (booking.userId.isNotEmpty) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(booking.userId)
+            .get();
+        if (userDoc.exists) {
+          final data = userDoc.data()!;
+          realCustomerName = data['name'] ?? data['fullName'] ?? booking.name;
+        }
+      }
+    } catch (_) {}
+
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Header(
+                level: 0,
+                child: pw.Text(
+                  'Service Receipt',
+                  style: pw.TextStyle(
+                    fontSize: 24,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Text('Booking ID: ${booking.id}'),
+              pw.Text('Customer Name: $realCustomerName'),
+              pw.Text('Contact: ${booking.contact}'),
+              pw.SizedBox(height: 20),
+              pw.Text('Vehicle: ${booking.vehicle}'),
+              pw.Text('Service: ${booking.service}'),
+              pw.Text(
+                'Completed On: ${DateFormat('MMM dd, yyyy').format(DateTime.now())}',
+              ),
+              pw.SizedBox(height: 30),
+              pw.Divider(),
+              pw.SizedBox(height: 10),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Total Amount:',
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.Text(
+                    '\$${booking.amount.toStringAsFixed(2)}',
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+    );
+  }
+
+  void _showBookingDetails(BookingData booking) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return FutureBuilder<DocumentSnapshot>(
+          future: FirebaseFirestore.instance
+              .collection('users')
+              .doc(booking.userId)
+              .get(),
+          builder: (context, snapshot) {
+            String realCustomerName = booking.name;
+            if (snapshot.hasData && snapshot.data!.exists) {
+              final data = snapshot.data!.data() as Map<String, dynamic>;
+              realCustomerName =
+                  data['name'] ?? data['fullName'] ?? booking.name;
+            }
+
+            return AlertDialog(
+              title: Text(
+                'Booking Details',
+                style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Customer: $realCustomerName',
+                    style: GoogleFonts.manrope(fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Contact: ${booking.contact}',
+                    style: GoogleFonts.manrope(fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final Uri url = Uri(scheme: 'tel', path: booking.contact);
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Could not launch dialer'),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.call),
+                    label: const Text('Call Customer'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF5D40D4),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  const Divider(height: 32),
+                  Text(
+                    'Vehicle: ${booking.vehicle}',
+                    style: GoogleFonts.manrope(fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Service: ${booking.service}',
+                    style: GoogleFonts.manrope(fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Appointment: ${DateFormat('MMM dd, yyyy - HH:mm').format(booking.appointmentDate)}',
+                    style: GoogleFonts.manrope(fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Amount: \$${booking.amount.toStringAsFixed(2)}',
+                    style: GoogleFonts.manrope(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showNewBookingDialog() {
@@ -515,13 +700,31 @@ class _BookingsViewState extends State<BookingsView> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            booking.name,
-                            style: GoogleFonts.manrope(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF0F172A),
-                            ),
+                          FutureBuilder<DocumentSnapshot>(
+                            future: FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(booking.userId)
+                                .get(),
+                            builder: (context, snapshot) {
+                              String realName = booking.name;
+                              if (snapshot.hasData && snapshot.data!.exists) {
+                                final data =
+                                    snapshot.data!.data()
+                                        as Map<String, dynamic>;
+                                realName =
+                                    data['name'] ??
+                                    data['fullName'] ??
+                                    booking.name;
+                              }
+                              return Text(
+                                realName,
+                                style: GoogleFonts.manrope(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              );
+                            },
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -733,34 +936,28 @@ class _BookingsViewState extends State<BookingsView> {
                       ),
                     ),
                   ),
-                  if (booking.status != 'COMPLETED') ...[
-                    const SizedBox(width: 16),
-                    InkWell(
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Viewing info for ${booking.id}...'),
-                          ),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        height: 48,
-                        width: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.info_outline,
-                            color: Color(0xFF64748B),
-                          ),
+                  const SizedBox(width: 16),
+                  InkWell(
+                    onTap: () {
+                      _showBookingDetails(booking);
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      height: 48,
+                      width: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.info_outline,
+                          color: Color(0xFF64748B),
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ],

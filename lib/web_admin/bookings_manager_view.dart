@@ -106,10 +106,6 @@ class BookingsManagerView extends StatelessWidget {
                                   child: StreamBuilder<QuerySnapshot>(
                                     stream: FirebaseFirestore.instance
                                         .collection('bookings')
-                                        .orderBy(
-                                          'appointmentDate',
-                                          descending: true,
-                                        )
                                         .snapshots(),
                                     builder: (context, snapshot) {
                                       if (snapshot.connectionState ==
@@ -130,7 +126,64 @@ class BookingsManagerView extends StatelessWidget {
                                         );
                                       }
 
-                                      final bookings = snapshot.data!.docs;
+                                      final docs = snapshot.data!.docs.toList();
+                                      docs.sort((a, b) {
+                                        final da =
+                                            a.data() as Map<String, dynamic>;
+                                        final db =
+                                            b.data() as Map<String, dynamic>;
+
+                                        DateTime? dateA;
+                                        if (da['appointmentDate'] != null) {
+                                          if (da['appointmentDate']
+                                              is Timestamp) {
+                                            dateA =
+                                                (da['appointmentDate']
+                                                        as Timestamp)
+                                                    .toDate();
+                                          } else {
+                                            dateA = DateTime.tryParse(
+                                              da['appointmentDate'].toString(),
+                                            );
+                                          }
+                                        } else if (da['createdAt'] != null &&
+                                            da['createdAt'] is Timestamp) {
+                                          dateA = (da['createdAt'] as Timestamp)
+                                              .toDate();
+                                        } else if (da['date'] != null) {
+                                          dateA = DateTime.tryParse(
+                                            da['date'].toString(),
+                                          );
+                                        }
+
+                                        DateTime? dateB;
+                                        if (db['appointmentDate'] != null) {
+                                          if (db['appointmentDate']
+                                              is Timestamp) {
+                                            dateB =
+                                                (db['appointmentDate']
+                                                        as Timestamp)
+                                                    .toDate();
+                                          } else {
+                                            dateB = DateTime.tryParse(
+                                              db['appointmentDate'].toString(),
+                                            );
+                                          }
+                                        } else if (db['createdAt'] != null &&
+                                            db['createdAt'] is Timestamp) {
+                                          dateB = (db['createdAt'] as Timestamp)
+                                              .toDate();
+                                        } else if (db['date'] != null) {
+                                          dateB = DateTime.tryParse(
+                                            db['date'].toString(),
+                                          );
+                                        }
+
+                                        return (dateB ?? DateTime.now())
+                                            .compareTo(dateA ?? DateTime.now());
+                                      });
+
+                                      final bookings = docs;
 
                                       return ListView.builder(
                                         itemCount: bookings.length,
@@ -147,25 +200,50 @@ class BookingsManagerView extends StatelessWidget {
                                               : doc.id.toUpperCase();
                                           String customer =
                                               data['name'] ??
+                                              data['customerName'] ??
                                               'Unknown Customer';
                                           String center =
                                               data['serviceCenterName'] ??
                                               'Unknown Center';
                                           String type =
                                               data['service'] ??
+                                              data['serviceName'] ??
                                               'General Service';
                                           String status =
                                               data['status'] ?? 'PENDING';
 
                                           String dateStr = 'Unknown Date';
                                           if (data['appointmentDate'] != null) {
-                                            DateTime dt =
-                                                (data['appointmentDate']
-                                                        as Timestamp)
-                                                    .toDate();
-                                            dateStr = DateFormat(
-                                              'MMM dd, hh:mm a',
-                                            ).format(dt);
+                                            DateTime? dt;
+                                            if (data['appointmentDate']
+                                                is Timestamp) {
+                                              dt =
+                                                  (data['appointmentDate']
+                                                          as Timestamp)
+                                                      .toDate();
+                                            } else {
+                                              dt = DateTime.tryParse(
+                                                data['appointmentDate']
+                                                    .toString(),
+                                              );
+                                            }
+                                            if (dt != null) {
+                                              dateStr = DateFormat(
+                                                'MMM dd, hh:mm a',
+                                              ).format(dt);
+                                            }
+                                          } else if (data['date'] != null) {
+                                            DateTime? dt = DateTime.tryParse(
+                                              data['date'],
+                                            );
+                                            if (dt != null) {
+                                              dateStr = DateFormat(
+                                                'MMM dd, yyyy',
+                                              ).format(dt);
+                                              if (data['time'] != null) {
+                                                dateStr += ', ${data['time']}';
+                                              }
+                                            }
                                           }
 
                                           String payment =
@@ -173,10 +251,15 @@ class BookingsManagerView extends StatelessWidget {
                                                   'COMPLETED'
                                               ? 'Paid'
                                               : 'Pending';
-                                          String amountStr =
-                                              data['amount'] != null
-                                              ? data['amount'].toString()
-                                              : '0.00';
+                                          String amountStr = '0.00';
+                                          if (data['amount'] != null) {
+                                            amountStr = data['amount']
+                                                .toString();
+                                          } else if (data['totalAmount'] !=
+                                              null) {
+                                            amountStr = data['totalAmount']
+                                                .toString();
+                                          }
                                           if (!amountStr.startsWith('\$')) {
                                             amountStr = '\$$amountStr';
                                           }

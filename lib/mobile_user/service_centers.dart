@@ -318,7 +318,16 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
                         const SizedBox(), // Empty if null (can add avatar stack here if requested, but simplifying)
 
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/service_selection',
+                            arguments: {
+                              'serviceCenterId': uid,
+                              'serviceCenterName': name,
+                            },
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.accent,
                           foregroundColor: AppTheme.backgroundDark,

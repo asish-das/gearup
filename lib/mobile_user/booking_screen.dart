@@ -3,6 +3,8 @@ import 'package:gearup/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gearup/services/vehicle_service.dart';
+import 'package:gearup/models/vehicle.dart';
 
 class BookingScreen extends StatefulWidget {
   const BookingScreen({super.key});
@@ -466,25 +468,72 @@ class _BookingScreenState extends State<BookingScreen> {
                           throw Exception('User not logged in');
                         }
 
-                        // Fetch user data for booking reference
                         final userDoc = await FirebaseFirestore.instance
                             .collection('users')
                             .doc(user.uid)
                             .get();
                         final userData = userDoc.data() ?? {};
 
+                        // Fetch user vehicles to attach to booking
+                        final vehicles = await VehicleService.getUserVehicles(
+                          user.uid,
+                        );
+                        Vehicle? defaultVehicle;
+                        if (vehicles.isNotEmpty) {
+                          defaultVehicle = vehicles.first;
+                        }
+
+                        DateTime appointmentDateTime = _selectedDate!;
+                        if (_selectedTime != null &&
+                            _selectedTime!.isNotEmpty) {
+                          try {
+                            final timeFormat = DateFormat('hh:mm a');
+                            final parsedTime = timeFormat.parse(_selectedTime!);
+                            appointmentDateTime = DateTime(
+                              _selectedDate!.year,
+                              _selectedDate!.month,
+                              _selectedDate!.day,
+                              parsedTime.hour,
+                              parsedTime.minute,
+                            );
+                          } catch (e) {
+                            // fallback
+                          }
+                        }
+
                         final bookingData = {
                           'userId': user.uid,
-                          'customerName': userData['fullName'] ?? 'Customer',
-                          'customerPhone': userData['phoneNumber'] ?? '',
+                          'name':
+                              userData['name'] ??
+                              userData['fullName'] ??
+                              'Customer',
+                          'contact': userData['phoneNumber'] ?? '',
+                          'customerName':
+                              userData['name'] ??
+                              userData['fullName'] ??
+                              'Customer', // legacy
+                          'customerPhone':
+                              userData['phoneNumber'] ?? '', // legacy
+                          'vehicleId': defaultVehicle?.id ?? '',
+                          'vehicle': defaultVehicle != null
+                              ? '${defaultVehicle.year} ${defaultVehicle.make} ${defaultVehicle.model}'
+                              : 'Unknown Vehicle',
                           'serviceCenterId': _serviceCenterId,
                           'serviceCenterName':
                               _serviceCenterName ?? 'Service Center',
-                          'serviceName': _serviceName,
-                          'date': _selectedDate!.toIso8601String(),
+                          'service': _serviceName,
+                          'serviceName': _serviceName, // legacy
+                          'date': _selectedDate!.toIso8601String(), // legacy
+                          'dateString': DateFormat(
+                            'yyyy-MM-dd',
+                          ).format(_selectedDate!),
                           'time': _selectedTime,
-                          'totalAmount': total,
-                          'status': 'pending',
+                          'appointmentDate': Timestamp.fromDate(
+                            appointmentDateTime,
+                          ),
+                          'amount': total,
+                          'totalAmount': total, // legacy
+                          'status': 'PENDING',
                           'createdAt': FieldValue.serverTimestamp(),
                         };
 

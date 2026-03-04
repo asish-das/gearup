@@ -54,7 +54,14 @@ class _ProfileViewState extends State<ProfileView> {
 
   Future<void> _loadProfile() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      return;
+    }
 
     try {
       final doc = await FirebaseFirestore.instance
@@ -205,6 +212,36 @@ class _ProfileViewState extends State<ProfileView> {
     final isDesktop = MediaQuery.of(context).size.width >= 900;
     final isMobile = MediaQuery.of(context).size.width < 600;
 
+    final Widget hoursColumn = Column(
+      children: [
+        Row(
+          children: [
+            Expanded(flex: 2, child: Text('DAY', style: _headerStyle())),
+            Expanded(flex: 2, child: Text('OPEN', style: _headerStyle())),
+            Expanded(flex: 2, child: Text('CLOSE', style: _headerStyle())),
+            Expanded(
+              flex: 1,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Text('STATUS', style: _headerStyle()),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        for (String day in [
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday',
+        ])
+          _buildHoursRow(day),
+      ],
+    );
+
     return Container(
       color: const Color(0xFFF6F6F8),
       padding: EdgeInsets.all(isDesktop ? 32.0 : 16.0),
@@ -351,52 +388,16 @@ class _ProfileViewState extends State<ProfileView> {
             isDesktop: isDesktop,
             title: 'Operating Hours',
             subtitle: 'Set your weekly schedule and break times.',
-            content: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: isDesktop
-                    ? null
-                    : 600, // ensure horizontal scroll works correctly on narrow screens
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: Text('DAY', style: _headerStyle()),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text('OPEN', style: _headerStyle()),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text('CLOSE', style: _headerStyle()),
-                        ),
-                        Expanded(
-                          flex: 1,
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Text('STATUS', style: _headerStyle()),
-                          ),
-                        ),
-                      ],
+            content: isDesktop
+                ? hoursColumn
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width:
+                          600, // ensure horizontal scroll works correctly on narrow screens
+                      child: hoursColumn,
                     ),
-                    const SizedBox(height: 24),
-                    for (String day in [
-                      'Monday',
-                      'Tuesday',
-                      'Wednesday',
-                      'Thursday',
-                      'Friday',
-                      'Saturday',
-                      'Sunday',
-                    ])
-                      _buildHoursRow(day),
-                  ],
-                ),
-              ),
-            ),
+                  ),
           ),
 
           const SizedBox(height: 48),
