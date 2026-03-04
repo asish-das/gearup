@@ -16,16 +16,133 @@ class _BookingScreenState extends State<BookingScreen> {
   String? _selectedTime;
   bool _isBooking = false;
 
-  final List<String> _availableTimes = [
-    '09:00 AM',
-    '10:30 AM',
-    '12:00 PM',
-    '01:30 PM',
-    '03:00 PM',
-    '04:30 PM',
-  ];
+  String? _serviceCenterId;
+  String? _serviceCenterName;
+  String? _serviceName;
+  String? _serviceDesc;
+  String? _priceStr;
 
-  final List<String> _unavailableTimes = ['12:00 PM', '03:00 PM'];
+  List<Map<String, dynamic>> _serviceCenterSlots = [];
+  List<String> _bookedTimes = [];
+  bool _isLoadingSlots = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_serviceCenterId == null) {
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      _serviceName = args?['name'] ?? 'General Service';
+      _serviceDesc = args?['desc'] ?? 'Standard maintenance';
+      _priceStr = args?['price'] ?? '\$0';
+      _serviceCenterId = args?['serviceCenterId'];
+      _serviceCenterName = args?['serviceCenterName'];
+
+      _fetchServiceCenterSlots();
+    }
+  }
+
+  Future<void> _fetchServiceCenterSlots() async {
+    if (_serviceCenterId == null) return;
+
+    setState(() {
+      _isLoadingSlots = true;
+    });
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_serviceCenterId)
+          .get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final slotConfig = data['slotConfig'] as Map<String, dynamic>? ?? {};
+        final List<dynamic> slotsList =
+            slotConfig['slots'] ??
+            [
+              {'time': '09:00 AM', 'status': 0},
+              {'time': '10:30 AM', 'status': 0},
+              {'time': '12:00 PM', 'status': 0},
+              {'time': '01:30 PM', 'status': 0},
+              {'time': '03:00 PM', 'status': 0},
+              {'time': '04:30 PM', 'status': 0},
+            ];
+
+        if (mounted) {
+          setState(() {
+            _serviceCenterSlots = slotsList
+                .map((e) => Map<String, dynamic>.from(e as Map))
+                .toList();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching slots: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingSlots = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchBookedSlotsForDate() async {
+    if (_serviceCenterId == null || _selectedDate == null) return;
+
+    setState(() {
+      _isLoadingSlots = true;
+    });
+
+    try {
+      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+
+      final query = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('serviceCenterId', isEqualTo: _serviceCenterId)
+          .get();
+
+      List<String> bookedTimes = [];
+      for (var doc in query.docs) {
+        final data = doc.data();
+        final bookingDateStr = data['dateString'] as String?;
+        final legacyDateIso = data['date'] as String?;
+
+        bool isMatchingDate = false;
+        if (bookingDateStr != null) {
+          isMatchingDate = (bookingDateStr == dateStr);
+        } else if (legacyDateIso != null) {
+          try {
+            final parsedDate = DateTime.parse(legacyDateIso);
+            final formattedLegacy = DateFormat('yyyy-MM-dd').format(parsedDate);
+            isMatchingDate = (formattedLegacy == dateStr);
+          } catch (_) {}
+        }
+
+        if (isMatchingDate) {
+          if (data['status'] != 'cancelled' && data['status'] != 'rejected') {
+            if (data['time'] != null) {
+              bookedTimes.add(data['time'] as String);
+            }
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _bookedTimes = bookedTimes;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching booked slots: \$e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingSlots = false;
+        });
+      }
+    }
+  }
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -52,22 +169,15 @@ class _BookingScreenState extends State<BookingScreen> {
         _selectedDate = picked;
         _selectedTime = null; // Reset time on new date
       });
+      _fetchBookedSlotsForDate();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final String serviceName = args?['name'] ?? 'General Service';
-    final String serviceDesc = args?['desc'] ?? 'Standard maintenance';
-    final String priceStr = args?['price'] ?? '\$0';
-    final String? serviceCenterId = args?['serviceCenterId'];
-    final String? serviceCenterName = args?['serviceCenterName'];
-
     // Parse price
     final double basePrice =
-        double.tryParse(priceStr.replaceAll('\$', '')) ?? 0.0;
+        double.tryParse((_priceStr ?? '\$0').replaceAll('\$', '')) ?? 0.0;
     final double serviceFee = 5.00; // Mock service fee
     final double taxes = basePrice * 0.08;
     final double total = basePrice + serviceFee + taxes;
@@ -114,7 +224,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          serviceName,
+                          _serviceName ?? 'Service',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -122,7 +232,7 @@ class _BookingScreenState extends State<BookingScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          serviceDesc,
+                          _serviceDesc ?? 'Description',
                           style: const TextStyle(
                             color: Colors.white54,
                             fontSize: 13,
@@ -190,76 +300,90 @@ class _BookingScreenState extends State<BookingScreen> {
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
-                children: _availableTimes.map((time) {
-                  final isUnavailable = _unavailableTimes.contains(time);
-                  final isSelected = _selectedTime == time;
-
-                  return InkWell(
-                    onTap: isUnavailable
-                        ? null
-                        : () {
-                            setState(() {
-                              _selectedTime = time;
-                            });
-                          },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppTheme.primary
-                            : isUnavailable
-                            ? Colors.grey.withValues(alpha: 0.1)
-                            : AppTheme.primary.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppTheme.primary
-                              : isUnavailable
-                              ? Colors.grey.withValues(alpha: 0.2)
-                              : AppTheme.primary.withValues(alpha: 0.3),
+                children: _isLoadingSlots
+                    ? [const CircularProgressIndicator()]
+                    : _serviceCenterSlots.isEmpty
+                    ? [
+                        const Text(
+                          'No slots available',
+                          style: TextStyle(color: Colors.white54),
                         ),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            time,
-                            style: TextStyle(
+                      ]
+                    : _serviceCenterSlots.map((slot) {
+                        final String time = slot['time'];
+                        final int configStatus = slot['status'] ?? 0;
+                        final bool isUnavailable =
+                            configStatus != 0 || _bookedTimes.contains(time);
+                        final isSelected = _selectedTime == time;
+
+                        return InkWell(
+                          onTap: isUnavailable
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _selectedTime = time;
+                                  });
+                                },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
                               color: isSelected
-                                  ? Colors.white
+                                  ? AppTheme.primary
                                   : isUnavailable
-                                  ? Colors.white24
-                                  : Colors.white,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              decoration: isUnavailable
-                                  ? TextDecoration.lineThrough
-                                  : null,
+                                  ? Colors.grey.withValues(alpha: 0.1)
+                                  : AppTheme.primary.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppTheme.primary
+                                    : isUnavailable
+                                    ? Colors.grey.withValues(alpha: 0.2)
+                                    : AppTheme.primary.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  time,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : isUnavailable
+                                        ? Colors.white24
+                                        : Colors.white,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    decoration: isUnavailable
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  isUnavailable ? 'Booked' : 'Available',
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white70
+                                        : isUnavailable
+                                        ? Colors.redAccent.withValues(
+                                            alpha: 0.5,
+                                          )
+                                        : Colors.green,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            isUnavailable ? 'Booked' : 'Available',
-                            style: TextStyle(
-                              color: isSelected
-                                  ? Colors.white70
-                                  : isUnavailable
-                                  ? Colors.redAccent.withValues(alpha: 0.5)
-                                  : Colors.green,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
+                        );
+                      }).toList(),
               ),
             ],
             const SizedBox(height: 32),
@@ -323,7 +447,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   (_selectedDate == null || _selectedTime == null || _isBooking)
                   ? null
                   : () async {
-                      if (serviceCenterId == null) {
+                      if (_serviceCenterId == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Invalid service center.'),
@@ -353,10 +477,10 @@ class _BookingScreenState extends State<BookingScreen> {
                           'userId': user.uid,
                           'customerName': userData['fullName'] ?? 'Customer',
                           'customerPhone': userData['phoneNumber'] ?? '',
-                          'serviceCenterId': serviceCenterId,
+                          'serviceCenterId': _serviceCenterId,
                           'serviceCenterName':
-                              serviceCenterName ?? 'Service Center',
-                          'serviceName': serviceName,
+                              _serviceCenterName ?? 'Service Center',
+                          'serviceName': _serviceName,
                           'date': _selectedDate!.toIso8601String(),
                           'time': _selectedTime,
                           'totalAmount': total,
@@ -379,7 +503,7 @@ class _BookingScreenState extends State<BookingScreen> {
                           '/tracking',
                           arguments: {
                             'trackingId': docRef.id,
-                            'serviceName': serviceName,
+                            'serviceName': _serviceName,
                           },
                         );
                       } catch (e) {
