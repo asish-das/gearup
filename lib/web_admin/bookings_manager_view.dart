@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BookingsManagerView extends StatelessWidget {
   const BookingsManagerView({super.key});
@@ -102,82 +103,117 @@ class BookingsManagerView extends StatelessWidget {
                               children: [
                                 _buildTableHeader(),
                                 Expanded(
-                                  child: ListView(
-                                    children: [
-                                      _buildTableRow(
-                                        '#BK-9482',
-                                        'Alexander Knight',
-                                        'Elite Motors Downtown',
-                                        'Full Annual Service',
-                                        'Scheduled',
-                                        DateFormat('MMM dd, hh:mm a').format(
-                                          DateTime.now().add(
-                                            const Duration(days: 1),
-                                          ),
-                                        ),
-                                        'Pending',
-                                        '\$240.00',
-                                        Colors.amber,
-                                      ),
-                                      _buildTableRow(
-                                        '#BK-9471',
-                                        'Sarah Jenkins',
-                                        'QuickFix Hub',
-                                        'Oil & Filter Change',
-                                        'In Progress',
-                                        DateFormat(
-                                          'MMM dd, hh:mm a',
-                                        ).format(DateTime.now()),
-                                        'Paid',
-                                        '\$85.00',
-                                        Colors.blue,
-                                      ),
-                                      _buildTableRow(
-                                        '#BK-9465',
-                                        'Michael Chen',
-                                        'GearUp Central',
-                                        'Brake Pad Replacement',
-                                        'Completed',
-                                        DateFormat('MMM dd, hh:mm a').format(
-                                          DateTime.now().subtract(
-                                            const Duration(days: 1),
-                                          ),
-                                        ),
-                                        'Paid',
-                                        '\$180.00',
-                                        Colors.green,
-                                      ),
-                                      _buildTableRow(
-                                        '#BK-9459',
-                                        'Emily Davis',
-                                        'South Side Garage',
-                                        'Tire Rotation & Balance',
-                                        'Cancelled',
-                                        DateFormat('MMM dd, hh:mm a').format(
-                                          DateTime.now().subtract(
-                                            const Duration(days: 2),
-                                          ),
-                                        ),
-                                        'Refunded',
-                                        '\$60.00',
-                                        Colors.red,
-                                      ),
-                                      _buildTableRow(
-                                        '#BK-9442',
-                                        'Robert Wilson',
-                                        'City Auto Care',
-                                        'Full Vehicle Inspection',
-                                        'Scheduled',
-                                        DateFormat('MMM dd, hh:mm a').format(
-                                          DateTime.now().add(
-                                            const Duration(days: 2),
-                                          ),
-                                        ),
-                                        'Pending',
-                                        '\$120.00',
-                                        Colors.amber,
-                                      ),
-                                    ],
+                                  child: StreamBuilder<QuerySnapshot>(
+                                    stream: FirebaseFirestore.instance
+                                        .collection('bookings')
+                                        .orderBy(
+                                          'appointmentDate',
+                                          descending: true,
+                                        )
+                                        .snapshots(),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState ==
+                                          ConnectionState.waiting) {
+                                        return const Center(
+                                          child: CircularProgressIndicator(),
+                                        );
+                                      }
+                                      if (snapshot.hasError) {
+                                        return const Center(
+                                          child: Text('Error loading bookings'),
+                                        );
+                                      }
+                                      if (!snapshot.hasData ||
+                                          snapshot.data!.docs.isEmpty) {
+                                        return const Center(
+                                          child: Text('No bookings found'),
+                                        );
+                                      }
+
+                                      final bookings = snapshot.data!.docs;
+
+                                      return ListView.builder(
+                                        itemCount: bookings.length,
+                                        itemBuilder: (context, index) {
+                                          final doc = bookings[index];
+                                          final data =
+                                              doc.data()
+                                                  as Map<String, dynamic>;
+
+                                          String id = doc.id.length > 6
+                                              ? doc.id
+                                                    .substring(0, 6)
+                                                    .toUpperCase()
+                                              : doc.id.toUpperCase();
+                                          String customer =
+                                              data['name'] ??
+                                              'Unknown Customer';
+                                          String center =
+                                              data['serviceCenterName'] ??
+                                              'Unknown Center';
+                                          String type =
+                                              data['service'] ??
+                                              'General Service';
+                                          String status =
+                                              data['status'] ?? 'PENDING';
+
+                                          String dateStr = 'Unknown Date';
+                                          if (data['appointmentDate'] != null) {
+                                            DateTime dt =
+                                                (data['appointmentDate']
+                                                        as Timestamp)
+                                                    .toDate();
+                                            dateStr = DateFormat(
+                                              'MMM dd, hh:mm a',
+                                            ).format(dt);
+                                          }
+
+                                          String payment =
+                                              status.toUpperCase() ==
+                                                  'COMPLETED'
+                                              ? 'Paid'
+                                              : 'Pending';
+                                          String amountStr =
+                                              data['amount'] != null
+                                              ? data['amount'].toString()
+                                              : '0.00';
+                                          if (!amountStr.startsWith('\$')) {
+                                            amountStr = '\$$amountStr';
+                                          }
+
+                                          MaterialColor statusColor =
+                                              Colors.grey;
+                                          if (status.toUpperCase() ==
+                                              'PENDING') {
+                                            statusColor = Colors.amber;
+                                          } else if (status.toUpperCase() ==
+                                              'ACCEPTED') {
+                                            statusColor = Colors.blue;
+                                          } else if (status.toUpperCase() ==
+                                              'IN SERVICE') {
+                                            statusColor = Colors.orange;
+                                          } else if (status.toUpperCase() ==
+                                              'COMPLETED') {
+                                            statusColor = Colors.green;
+                                          } else if (status.toUpperCase() ==
+                                              'CANCELLED') {
+                                            statusColor = Colors.red;
+                                          }
+
+                                          return _buildTableRow(
+                                            '#$id',
+                                            customer,
+                                            center,
+                                            type,
+                                            status,
+                                            dateStr,
+                                            payment,
+                                            amountStr,
+                                            statusColor,
+                                          );
+                                        },
+                                      );
+                                    },
                                   ),
                                 ),
                               ],

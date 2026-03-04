@@ -8,6 +8,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import 'package:gearup/services/vehicle_service.dart';
 import 'package:gearup/models/vehicle.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -226,7 +227,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: _showEditProfileDialog,
               icon: const Icon(Icons.edit, color: Colors.white),
               label: const Text(
                 'Edit Profile',
@@ -1400,6 +1401,168 @@ class _ProfilePageState extends State<ProfilePage> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Error updating vehicle: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditProfileDialog() {
+    if (_currentUser == null) return;
+
+    final nameController = TextEditingController(text: _currentUser!.name);
+    final phoneController = TextEditingController(
+      text: _currentUser!.phoneNumber,
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppTheme.backgroundDark,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: AppTheme.primary.withValues(alpha: 0.5),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primary.withValues(alpha: 0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(22),
+                  ),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: AppTheme.primary.withValues(alpha: 0.2),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.person, color: AppTheme.primary),
+                    ),
+                    const SizedBox(width: 16),
+                    const Text(
+                      'Edit Profile',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildThemedTextField(
+                        controller: nameController,
+                        label: 'Full Name',
+                        hint: 'e.g., John Doe',
+                        icon: Icons.person_outline,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildThemedTextField(
+                        controller: phoneController,
+                        label: 'Phone Number',
+                        hint: 'e.g., +1 234 567 8900',
+                        icon: Icons.phone,
+                        keyboardType: TextInputType.phone,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(22),
+                  ),
+                  border: Border(
+                    top: BorderSide(
+                      color: AppTheme.primary.withValues(alpha: 0.2),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildDialogButton(
+                        'Cancel',
+                        Colors.grey,
+                        () => Navigator.pop(context),
+                        isOutlined: true,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildDialogButton(
+                        'Save',
+                        AppTheme.primary,
+                        () async {
+                          if (nameController.text.isNotEmpty) {
+                            try {
+                              await FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(_currentUser!.uid)
+                                  .update({
+                                    'name': nameController.text.trim(),
+                                    'phoneNumber': phoneController.text.trim(),
+                                  });
+                              await _loadUserData();
+                              if (!context.mounted) return;
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Profile updated successfully!',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error updating profile: $e'),
                                   backgroundColor: Colors.red,
                                 ),
                               );

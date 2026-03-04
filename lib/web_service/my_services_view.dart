@@ -876,7 +876,7 @@ class _MyServicesViewState extends State<MyServicesView> {
                             },
                           }, SetOptions(merge: true));
 
-                      if (context.mounted) {
+                      if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Slot preferences saved.'),

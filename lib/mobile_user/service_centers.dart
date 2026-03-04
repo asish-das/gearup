@@ -69,14 +69,13 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
               stream: FirebaseFirestore.instance
                   .collection('users')
                   .where('role', isEqualTo: 'serviceCenter')
-                  .where('status', isEqualTo: 'approved')
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(
+                  return const Center(
                     child: Text(
                       'Error loading centers',
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(color: Colors.red),
                     ),
                   );
                 }
@@ -87,7 +86,16 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
                   );
                 }
 
-                final centers = snapshot.data?.docs ?? [];
+                final allDocs = snapshot.data?.docs ?? [];
+                // Filtering in memory so we don't need composite indexes until ready
+                // and to allow 'pending' or 'active' for easy testing.
+                final centers = allDocs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final status = data['status']?.toString().toLowerCase();
+                  return status == 'approved' ||
+                      status == 'active' ||
+                      status == 'pending';
+                }).toList();
 
                 if (centers.isEmpty) {
                   return const Center(
@@ -111,17 +119,25 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
                         context: context,
                         uid: docId,
                         name:
-                            data['businessName'] ??
-                            data['name'] ??
-                            'Unknown Center',
-                        distance: data['address'] ?? 'Location not specified',
+                            data['businessName']?.toString().isNotEmpty == true
+                            ? data['businessName']
+                            : (data['name'] ?? 'Unknown Center'),
+                        distance: data['address']?.toString().isNotEmpty == true
+                            ? data['address']
+                            : 'Location not specified',
                         description:
-                            'Professional vehicle maintenance and repair services.',
-                        rating: '4.8', // Mock rating for now
-                        imageUrl: data['profileImageUrl']?.isNotEmpty == true
+                            data['description']?.toString().isNotEmpty == true
+                            ? data['description']
+                            : 'Professional vehicle maintenance and repair services.',
+                        rating: (data['rating'] ?? 4.8).toString(),
+                        imageUrl:
+                            data['profileImageUrl']?.toString().isNotEmpty ==
+                                true
                             ? data['profileImageUrl']
                             : 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-                        status: 'AVAILABLE',
+                        status:
+                            (data['status']?.toString().toUpperCase() ??
+                            'AVAILABLE'),
                       ),
                     );
                   },

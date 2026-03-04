@@ -67,15 +67,22 @@ class ServiceSelectionScreen extends StatelessWidget {
                   itemCount: services.length,
                   itemBuilder: (context, index) {
                     final data = services[index].data() as Map<String, dynamic>;
+                    // In my_services_view.dart, we stored the price as string (e.g. '$0.00'), so we check if it already starts with $.
+                    String priceStr = data['price'] ?? '0';
+                    if (!priceStr.startsWith('\$')) {
+                      priceStr = '\$$priceStr';
+                    }
+
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _buildServiceTile(
                         context,
-                        data['title'] ?? 'Unknown Service',
-                        data['description'] ?? 'No description available',
-                        '\$${data['price'] ?? 0}',
-                        Icons
-                            .build, // Default icon, you can make this dynamic if stored
+                        data['title'] ?? data['name'] ?? 'Unknown Service',
+                        data['desc'] ??
+                            data['description'] ??
+                            'No description available',
+                        priceStr,
+                        Icons.build, // Default icon
                         serviceCenterId,
                         serviceCenterName,
                       ),
