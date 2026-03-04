@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../widgets/live_tracking_map.dart';
 
 class ServiceTrackingScreen extends StatelessWidget {
@@ -64,7 +65,9 @@ class ServiceTrackingScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppTheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: AppTheme.primary.withValues(alpha: 0.2),
+                ),
               ),
               child: Column(
                 children: [
@@ -210,7 +213,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                   Icons.check_circle,
                   AppTheme.successGreen,
                   'Arrived at Workshop',
-                  'Completed at 10:30 AM',
+                  'Completed at ${DateFormat('hh:mm a').format(DateTime.now().subtract(const Duration(minutes: 90)))}',
                   isLineSolid: true,
                   lineColor: AppTheme.successGreen,
                 ),
@@ -218,7 +221,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                   Icons.check_circle,
                   AppTheme.successGreen,
                   'Inspecting Components',
-                  'Completed at 11:15 AM',
+                  'Completed at ${DateFormat('hh:mm a').format(DateTime.now().subtract(const Duration(minutes: 45)))}',
                   isLineSolid: true,
                   lineColor: AppTheme.successGreen,
                 ),
@@ -252,21 +255,23 @@ class ServiceTrackingScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppTheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: AppTheme.primary.withValues(alpha: 0.2),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         'Estimated Completion',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        'Today, 2:30 PM',
-                        style: TextStyle(
+                        'Today, ${DateFormat('hh:mm a').format(DateTime.now().add(const Duration(minutes: 45)))}',
+                        style: const TextStyle(
                           color: AppTheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
@@ -332,7 +337,9 @@ class ServiceTrackingScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.redAccent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: Colors.redAccent.withValues(alpha: 0.3),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -505,7 +512,9 @@ class ServiceTrackingScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.redAccent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: Colors.redAccent.withValues(alpha: 0.3),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

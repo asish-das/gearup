@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class CustomersView extends StatelessWidget {
   const CustomersView({super.key});
@@ -147,8 +148,12 @@ class CustomersView extends StatelessWidget {
                             children: [
                               _buildCustomerRow(
                                 'Alex Johnson',
-                                'BMW 3 Series (2021)',
-                                'Oct 15, 2023',
+                                'BMW 3 Series (${DateTime.now().year - 2})',
+                                DateFormat('MMM dd, yyyy').format(
+                                  DateTime.now().subtract(
+                                    const Duration(days: 5),
+                                  ),
+                                ),
                                 '12',
                                 'alex.j@email.com',
                                 '+1 555-0102',
@@ -156,8 +161,12 @@ class CustomersView extends StatelessWidget {
                               ),
                               _buildCustomerRow(
                                 'Maria Garcia',
-                                'Audi Q5 (2019)',
-                                'Nov 02, 2023',
+                                'Audi Q5 (${DateTime.now().year - 4})',
+                                DateFormat('MMM dd, yyyy').format(
+                                  DateTime.now().subtract(
+                                    const Duration(days: 8),
+                                  ),
+                                ),
                                 '5',
                                 'm.garcia@email.com',
                                 '+1 555-0198',
@@ -165,8 +174,12 @@ class CustomersView extends StatelessWidget {
                               ),
                               _buildCustomerRow(
                                 'James Smith',
-                                'Tesla Model 3 (2023)',
-                                'Sep 20, 2023',
+                                'Tesla Model 3 (${DateTime.now().year})',
+                                DateFormat('MMM dd, yyyy').format(
+                                  DateTime.now().subtract(
+                                    const Duration(days: 15),
+                                  ),
+                                ),
                                 '24',
                                 'jsmith@email.com',
                                 '+1 555-0144',
@@ -174,8 +187,12 @@ class CustomersView extends StatelessWidget {
                               ),
                               _buildCustomerRow(
                                 'Linda Chen',
-                                'Honda Civic (2018)',
-                                'Dec 01, 2023',
+                                'Honda Civic (${DateTime.now().year - 5})',
+                                DateFormat('MMM dd, yyyy').format(
+                                  DateTime.now().subtract(
+                                    const Duration(days: 30),
+                                  ),
+                                ),
                                 '2',
                                 'lchen@email.com',
                                 '+1 555-0155',
@@ -358,17 +375,29 @@ class CustomersView extends StatelessWidget {
                             const SizedBox(height: 16),
                             _buildHistoryRow(
                               'Oil Change & Inspection',
-                              '15 Oct 2023',
+                              DateFormat('dd MMM yyyy').format(
+                                DateTime.now().subtract(
+                                  const Duration(days: 45),
+                                ),
+                              ),
                               'Full synthetic oil, oil filter, air filter, multipoint inspection.',
                             ),
                             _buildHistoryRow(
                               'Brake Pad Replacement',
-                              '22 Jun 2023',
+                              DateFormat('dd MMM yyyy').format(
+                                DateTime.now().subtract(
+                                  const Duration(days: 120),
+                                ),
+                              ),
                               'Front ceramic brake pads, rotor resurfacing.',
                             ),
                             _buildHistoryRow(
                               'Tire Rotation',
-                              '10 Mar 2023',
+                              DateFormat('dd MMM yyyy').format(
+                                DateTime.now().subtract(
+                                  const Duration(days: 200),
+                                ),
+                              ),
                               'Four wheel balance and rotation.',
                             ),
                             const SizedBox(height: 16),
@@ -461,7 +490,9 @@ class CustomersView extends StatelessWidget {
                           color: const Color(0xFFECFDF5),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                            color: const Color(
+                              0xFF10B981,
+                            ).withValues(alpha: 0.2),
                           ),
                         ),
                         child: Row(

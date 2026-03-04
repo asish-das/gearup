@@ -7,8 +7,332 @@ class DashboardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFF6F6F8),
-      padding: const EdgeInsets.all(32.0),
+      color: const Color(0xFFF8FAFC),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top App Bar Area
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isSmall = constraints.maxWidth < 600;
+                return isSmall
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildTitle(),
+                          const SizedBox(height: 16),
+                          _buildSearchBar(),
+                          const SizedBox(height: 16),
+                          _buildActionIcons(),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildTitle(),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24.0,
+                              ),
+                              child: _buildSearchBar(),
+                            ),
+                          ),
+                          _buildActionIcons(),
+                        ],
+                      );
+              },
+            ),
+            const SizedBox(height: 32),
+
+            // Stats Row / Grid
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final double width = constraints.maxWidth;
+                int crossAxisCount = 4;
+                if (width < 600) {
+                  crossAxisCount = 1;
+                } else if (width < 900) {
+                  crossAxisCount = 2;
+                }
+
+                return GridView.count(
+                  crossAxisCount: crossAxisCount,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 24,
+                  mainAxisSpacing: 24,
+                  childAspectRatio: width < 600 ? 2.5 : 1.5,
+                  children: [
+                    _buildStatCard(
+                      'Total Users',
+                      '12,482',
+                      Icons.people_alt_rounded,
+                      const Color(0xFF4F46E5),
+                      const Color(0xFF818CF8),
+                      '+12%',
+                    ),
+                    _buildStatCard(
+                      'Active Centers',
+                      '842',
+                      Icons.handyman_rounded,
+                      const Color(0xFF0ea5e9),
+                      const Color(0xFF38bdf8),
+                      '+5%',
+                    ),
+                    _buildStatCard(
+                      'Bookings',
+                      '45.2k',
+                      Icons.calendar_month_rounded,
+                      const Color(0xFFF59E0B),
+                      const Color(0xFFFCD34D),
+                      '+18%',
+                    ),
+                    _buildStatCard(
+                      'Monthly Revenue',
+                      '\$1.24M',
+                      Icons.attach_money_rounded,
+                      const Color(0xFF10B981),
+                      const Color(0xFF34D399),
+                      '+24%',
+                    ),
+                  ],
+                );
+              },
+            ),
+
+            const SizedBox(height: 32),
+
+            // Charts Area
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isSmall = constraints.maxWidth < 1000;
+                final revenueChart = _buildRevenueChart();
+                final bookingChart = _buildBookingChart();
+
+                return isSmall
+                    ? Column(
+                        children: [
+                          SizedBox(height: 400, child: revenueChart),
+                          const SizedBox(height: 24),
+                          SizedBox(height: 400, child: bookingChart),
+                        ],
+                      )
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: SizedBox(height: 420, child: revenueChart),
+                          ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            flex: 1,
+                            child: SizedBox(height: 420, child: bookingChart),
+                          ),
+                        ],
+                      );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTitle() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Overview',
+          style: GoogleFonts.manrope(
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF0F172A),
+            letterSpacing: -0.5,
+          ),
+        ),
+        Text(
+          'Here\'s what\'s happening today.',
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            color: const Color(0xFF64748B),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 20),
+          const Icon(Icons.search, color: Color(0xFF94A3B8), size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search analytics or centers...',
+                hintStyle: GoogleFonts.manrope(
+                  color: const Color(0xFF94A3B8),
+                  fontSize: 14,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionIcons() {
+    return Row(
+      children: [
+        _buildIconButton(Icons.notifications_none_rounded),
+        const SizedBox(width: 16),
+        _buildIconButton(Icons.chat_bubble_outline_rounded),
+      ],
+    );
+  }
+
+  Widget _buildIconButton(IconData icon) {
+    return Container(
+      height: 48,
+      width: 48,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Icon(icon, color: const Color(0xFF64748B), size: 22),
+    );
+  }
+
+  Widget _buildRevenueChart() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Revenue Analysis',
+                    style: GoogleFonts.manrope(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                  Text(
+                    'Cumulative earnings across all regions',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'Last 7 Months',
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF334155),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 16,
+                      color: Color(0xFF334155),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          Expanded(
+            child: CustomPaint(
+              size: Size.infinite,
+              painter: _MockChartPainter(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBookingChart() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -16,235 +340,29 @@ class DashboardView extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Dashboard',
+                'Booking Trend',
                 style: GoogleFonts.manrope(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
                   color: const Color(0xFF0F172A),
                 ),
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 16),
-                        const Icon(Icons.search, color: Color(0xFF94A3B8)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText: 'Search analytics or centers...',
-                              hintStyle: GoogleFonts.manrope(
-                                color: const Color(0xFF94A3B8),
-                                fontSize: 14,
-                              ),
-                              border: InputBorder.none,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ),
-              Row(
-                children: [
-                  Container(
-                    height: 48,
-                    width: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: const Icon(
-                      Icons.notifications_none,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Container(
-                    height: 48,
-                    width: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: const Icon(
-                      Icons.chat_bubble_outline,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
+                child: const Icon(
+                  Icons.more_horiz,
+                  color: Color(0xFF64748B),
+                  size: 20,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 32),
-          // Stats Row
-          Row(
-            children: [
-              _buildStatCard(
-                'Total Users',
-                '12,482',
-                Icons.people_outline,
-                const Color(0xFF3B82F6),
-                '+12%',
-              ),
-              const SizedBox(width: 24),
-              _buildStatCard(
-                'Active Centers',
-                '842',
-                Icons.build_circle_outlined,
-                const Color(0xFF8B5CF6),
-                '+5%',
-              ),
-              const SizedBox(width: 24),
-              _buildStatCard(
-                'Bookings',
-                '45.2k',
-                Icons.book_online_outlined,
-                const Color(0xFF10B981),
-                '+18%',
-              ),
-              const SizedBox(width: 24),
-              _buildStatCard(
-                'Monthly Revenue',
-                '\$1.24M',
-                Icons.payments_outlined,
-                const Color(0xFF5D40D4),
-                '+24%',
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Revenue Analysis',
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF0F172A),
-                                  ),
-                                ),
-                                Text(
-                                  'Cumulative earnings across all regions',
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 12,
-                                    color: const Color(0xFF64748B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    'Last 7 Months',
-                                    style: GoogleFonts.manrope(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Icon(
-                                    Icons.keyboard_arrow_down,
-                                    size: 16,
-                                    color: Color(0xFF0F172A),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        Expanded(
-                          child: CustomPaint(
-                            size: Size.infinite,
-                            painter: _MockChartPainter(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 24),
-                Expanded(
-                  flex: 1,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Booking Trend',
-                              style: GoogleFonts.manrope(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF0F172A),
-                              ),
-                            ),
-                            const Icon(
-                              Icons.more_horiz,
-                              color: Color(0xFF94A3B8),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        Expanded(child: _buildBarChart()),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          Expanded(child: _buildBarChart()),
         ],
       ),
     );
@@ -254,80 +372,104 @@ class DashboardView extends StatelessWidget {
     String title,
     String value,
     IconData icon,
-    Color iconColor,
+    Color bgGradientStart,
+    Color bgGradientEnd,
     String trend,
   ) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [bgGradientStart, bgGradientEnd],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: Icon(icon, color: iconColor),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: bgGradientStart.withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.trending_up,
-                        color: Color(0xFF10B981),
-                        size: 12,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        trend,
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF10B981),
-                        ),
-                      ),
-                    ],
-                  ),
+                child: Icon(icon, color: Colors.white, size: 24),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: GoogleFonts.manrope(
-                fontSize: 14,
-                color: const Color(0xFF64748B),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.trending_up_rounded,
+                      color: Color(0xFF059669),
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      trend,
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF059669),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: GoogleFonts.manrope(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF0F172A),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF64748B),
+                ),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: GoogleFonts.manrope(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF0F172A),
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

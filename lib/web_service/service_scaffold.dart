@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gearup/services/navigation_service.dart';
+import 'package:gearup/services/auth_service.dart';
 
 import 'dashboard_view.dart';
 import 'bookings_view.dart';
@@ -59,7 +60,9 @@ class _ServiceScaffoldState extends State<ServiceScaffold> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF5D40D4).withValues(alpha: 0.2),
+                              color: const Color(
+                                0xFF5D40D4,
+                              ).withValues(alpha: 0.2),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -149,7 +152,9 @@ class _ServiceScaffoldState extends State<ServiceScaffold> {
                             color: const Color(0xFFF3E8FF),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: const Color(0xFF5D40D4).withValues(alpha: 0.2),
+                              color: const Color(
+                                0xFF5D40D4,
+                              ).withValues(alpha: 0.2),
                             ),
                           ),
                           child: Row(
@@ -210,7 +215,8 @@ class _ServiceScaffoldState extends State<ServiceScaffold> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'John Doe',
+                                  AuthService.currentUser?.email ??
+                                      'Unknown User',
                                   style: GoogleFonts.manrope(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -218,7 +224,7 @@ class _ServiceScaffoldState extends State<ServiceScaffold> {
                                   ),
                                 ),
                                 Text(
-                                  'Manager',
+                                  'Service Admin',
                                   style: GoogleFonts.manrope(
                                     fontSize: 12,
                                     color: const Color(0xFF64748B),
@@ -227,6 +233,42 @@ class _ServiceScaffoldState extends State<ServiceScaffold> {
                               ],
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Logout
+                        InkWell(
+                          onTap: () async {
+                            await AuthService.signOut();
+                            if (context.mounted) {
+                              Navigator.of(
+                                context,
+                              ).pushNamedAndRemoveUntil('/', (route) => false);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.logout,
+                                  color: Color(0xFFEF4444),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Logout',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFFEF4444),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),

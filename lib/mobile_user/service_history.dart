@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 
 class ServiceHistoryScreen extends StatelessWidget {
   const ServiceHistoryScreen({super.key});
@@ -79,7 +80,9 @@ class ServiceHistoryScreen extends StatelessWidget {
           children: [
             _buildServiceEntry(
               title: 'Full Engine Tune-up',
-              date: 'Oct 12, 2023',
+              date: DateFormat(
+                'MMM dd, yyyy',
+              ).format(DateTime.now().subtract(const Duration(days: 30))),
               location: 'GearUp Central Hub',
               price: '\$245.00',
               icon: Icons.settings_suggest,
@@ -89,7 +92,9 @@ class ServiceHistoryScreen extends StatelessWidget {
             ),
             _buildServiceEntry(
               title: 'Brake Pad Replacement',
-              date: 'Aug 05, 2023',
+              date: DateFormat(
+                'MMM dd, yyyy',
+              ).format(DateTime.now().subtract(const Duration(days: 65))),
               location: 'East Side Garage',
               price: '\$189.50',
               icon: Icons.tire_repair,
@@ -98,7 +103,9 @@ class ServiceHistoryScreen extends StatelessWidget {
             ),
             _buildServiceEntry(
               title: 'Oil & Filter Change',
-              date: 'May 20, 2023',
+              date: DateFormat(
+                'MMM dd, yyyy',
+              ).format(DateTime.now().subtract(const Duration(days: 120))),
               location: 'GearUp Express',
               price: '\$85.00',
               icon: Icons.oil_barrel,
@@ -241,8 +248,8 @@ class ServiceHistoryScreen extends StatelessWidget {
                                   style: TextStyle(color: AppTheme.accent),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primary.withValues(alpha: 
-                                    0.2,
+                                  backgroundColor: AppTheme.primary.withValues(
+                                    alpha: 0.2,
                                   ), // Use withValues if flutter version allows, string building takes withOpacity here implicitly
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(

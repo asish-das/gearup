@@ -14,6 +14,9 @@ class User {
   final UserRole role;
   final String? phoneNumber;
   final String? profileImageUrl;
+  final String? businessName;
+  final String? status;
+  final String? createdAt;
 
   User({
     required this.uid,
@@ -22,6 +25,9 @@ class User {
     required this.role,
     this.phoneNumber,
     this.profileImageUrl,
+    this.businessName,
+    this.status,
+    this.createdAt,
   });
 
   factory User.fromMap(Map<String, dynamic> map) {
@@ -35,6 +41,9 @@ class User {
       ),
       phoneNumber: map['phoneNumber'],
       profileImageUrl: map['profileImageUrl'],
+      businessName: map['businessName'],
+      status: map['status'],
+      createdAt: map['createdAt'],
     );
   }
 
@@ -46,6 +55,9 @@ class User {
       'role': role.name,
       'phoneNumber': phoneNumber,
       'profileImageUrl': profileImageUrl,
+      'businessName': businessName,
+      'status': status,
+      'createdAt': createdAt,
     };
   }
 }

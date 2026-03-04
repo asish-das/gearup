@@ -12,11 +12,13 @@ import 'package:gearup/mobile_user/booking_screen.dart';
 import 'package:gearup/mobile_user/service_tracking.dart';
 import 'package:gearup/web_admin/admin_scaffold.dart';
 import 'package:gearup/web_service/service_scaffold.dart';
+import 'package:gearup/web_auth/web_login_screen.dart';
 import 'package:gearup/mobile_user/service_selection_screen.dart';
 import 'package:gearup/mobile_user/emergency_screen.dart';
 import 'package:gearup/services/auth_service.dart';
 import 'package:gearup/models/user.dart';
 import 'package:gearup/test_auth.dart';
+import 'package:gearup/access_denied_screens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,13 +44,32 @@ class _GearUpAppState extends State<GearUpApp> {
   }
 
   Future<void> _initializeAuth() async {
-    AuthService.authStateChanges.listen((user) {
-      setState(() {
-        _currentUser = user != null
-            ? null
-            : null; // Will be updated with user data
-        _isLoading = false;
-      });
+    AuthService.authStateChanges.listen((user) async {
+      if (user != null) {
+        try {
+          final userData = await AuthService.getUserData(user.uid);
+          if (mounted) {
+            setState(() {
+              _currentUser = userData;
+              _isLoading = false;
+            });
+          }
+        } catch (e) {
+          if (mounted) {
+            setState(() {
+              _currentUser = null;
+              _isLoading = false;
+            });
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _currentUser = null;
+            _isLoading = false;
+          });
+        }
+      }
     });
 
     // Check initial auth state
@@ -78,23 +99,44 @@ class _GearUpAppState extends State<GearUpApp> {
     }
 
     if (_currentUser == null) {
-      // Not authenticated - show splash screen which will navigate to onboarding
-      return const SplashScreen();
+      // Not authenticated - show different screens based on platform
+      if (kIsWeb) {
+        return const WebLoginScreen(); // Web shows login screen
+      } else {
+        return const SplashScreen(); // Mobile shows splash screen
+      }
     }
 
     // Authenticated - route based on role and platform
     if (kIsWeb) {
+      // Web: Admin and Service Center only
       switch (_currentUser!.role) {
-        case UserRole.vehicleOwner:
-          return const MainNavigation(); // Vehicle owners use mobile app on web too
         case UserRole.serviceCenter:
+          if (_currentUser!.status == 'pending') {
+            return const WebApprovalPendingScreen();
+          } else if (_currentUser!.status == 'suspended') {
+            return const WebAccountSuspendedScreen();
+          }
           return const ServiceScaffold();
         case UserRole.admin:
           return const AdminScaffold();
+        case UserRole.vehicleOwner:
+          // Vehicle owners should use mobile app, not web
+          return const WebAccessDeniedScreen();
       }
     } else {
-      // Mobile - all authenticated users see mobile app
-      return const MainNavigation();
+      // Mobile: Vehicle owners only
+      switch (_currentUser!.role) {
+        case UserRole.vehicleOwner:
+          if (_currentUser!.status == 'suspended') {
+            return const WebAccountSuspendedScreen();
+          }
+          return const MainNavigation();
+        case UserRole.serviceCenter:
+        case UserRole.admin:
+          // Admin and Service Center should use web, not mobile
+          return const MobileAccessDeniedScreen();
+      }
     }
   }
 
@@ -155,6 +197,14 @@ class _GearUpAppState extends State<GearUpApp> {
           case '/test-auth':
             return MaterialPageRoute(
               builder: (context) => const AuthTestScreen(),
+            );
+          case '/admin-login':
+            return MaterialPageRoute(
+              builder: (context) => const WebLoginScreen(),
+            );
+          case '/service-login':
+            return MaterialPageRoute(
+              builder: (context) => const WebLoginScreen(),
             );
           default:
             return MaterialPageRoute(

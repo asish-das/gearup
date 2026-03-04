@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import 'package:gearup/services/auth_service.dart';
 import 'package:gearup/models/user.dart';
 import 'package:gearup/services/vehicle_service.dart';
@@ -933,8 +934,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
+                  children: [
+                    const Text(
                       'Office to Home',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -942,8 +943,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                     ),
                     Text(
-                      'Yesterday • 12.4 miles • 28 mins',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                      '${DateFormat('MM/dd/yyyy').format(DateTime.now().subtract(const Duration(days: 1)))} • 12.4 miles • 28 mins',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),

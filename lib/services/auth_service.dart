@@ -19,6 +19,7 @@ class AuthService {
     required String name,
     required UserRole role,
     String? phoneNumber,
+    String? businessName,
   }) async {
     try {
       // Create user with email and password
@@ -34,6 +35,9 @@ class AuthService {
         name: name,
         role: role,
         phoneNumber: phoneNumber,
+        businessName: businessName,
+        status: role == UserRole.serviceCenter ? 'pending' : 'active',
+        createdAt: DateTime.now().toIso8601String(),
       );
 
       await _firestore.collection('users').doc(user.uid).set(user.toMap());
@@ -61,6 +65,11 @@ class AuthService {
         // Not a mobile user
         await _auth.signOut();
         throw 'Access Denied: This app is only for Vehicle Owners. Please use the web dashboard.';
+      }
+
+      if (userData.status == 'suspended') {
+        await _auth.signOut();
+        throw 'Your account has been suspended by the administrator. Please wait for approval.';
       }
 
       return result.user!.uid;

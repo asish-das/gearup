@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class RevenueView extends StatelessWidget {
   const RevenueView({super.key});
@@ -89,10 +90,7 @@ class RevenueView extends StatelessWidget {
                               color: const Color(0xFF64748B),
                             ),
                           ),
-                          const Icon(
-                            Icons.star,
-                            color: Color(0xFF5D40D4),
-                          ),
+                          const Icon(Icons.star, color: Color(0xFF5D40D4)),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -364,7 +362,7 @@ class RevenueView extends StatelessWidget {
                       children: [
                         _buildTxRow(
                           '#TRX-8291',
-                          'Oct 24, 2023',
+                          DateFormat('MMM dd, yyyy').format(DateTime.now()),
                           'Alex Thompson',
                           '\$1,240.00',
                           'Paid',
@@ -372,7 +370,7 @@ class RevenueView extends StatelessWidget {
                         ),
                         _buildTxRow(
                           '#TRX-8292',
-                          'Oct 24, 2023',
+                          DateFormat('MMM dd, yyyy').format(DateTime.now()),
                           'Sarah Jenkins',
                           '\$450.00',
                           'Pending',
@@ -380,7 +378,9 @@ class RevenueView extends StatelessWidget {
                         ),
                         _buildTxRow(
                           '#TRX-8293',
-                          'Oct 23, 2023',
+                          DateFormat('MMM dd, yyyy').format(
+                            DateTime.now().subtract(const Duration(days: 1)),
+                          ),
                           'Michael Chen',
                           '\$2,100.00',
                           'Paid',
@@ -388,7 +388,9 @@ class RevenueView extends StatelessWidget {
                         ),
                         _buildTxRow(
                           '#TRX-8294',
-                          'Oct 23, 2023',
+                          DateFormat('MMM dd, yyyy').format(
+                            DateTime.now().subtract(const Duration(days: 1)),
+                          ),
                           'David Miller',
                           '\$85.00',
                           'Paid',
@@ -396,7 +398,9 @@ class RevenueView extends StatelessWidget {
                         ),
                         _buildTxRow(
                           '#TRX-8295',
-                          'Oct 22, 2023',
+                          DateFormat('MMM dd, yyyy').format(
+                            DateTime.now().subtract(const Duration(days: 2)),
+                          ),
                           'Emma Watson',
                           '\$670.00',
                           'Pending',

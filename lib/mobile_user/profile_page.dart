@@ -340,7 +340,9 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 56),
-                side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.5)),
+                side: BorderSide(
+                  color: Colors.redAccent.withValues(alpha: 0.5),
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -486,7 +488,10 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: AppTheme.primary.withValues(alpha: 0.3),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.25),
@@ -551,8 +556,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                     errorBuilder: (context, error, stackTrace) {
                                       return Icon(
                                         Icons.directions_car,
-                                        color: AppTheme.primary.withValues(alpha: 
-                                          0.8,
+                                        color: AppTheme.primary.withValues(
+                                          alpha: 0.8,
                                         ),
                                         size: 32,
                                       );
@@ -561,7 +566,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 )
                               : Icon(
                                   Icons.directions_car,
-                                  color: AppTheme.primary.withValues(alpha: 0.8),
+                                  color: AppTheme.primary.withValues(
+                                    alpha: 0.8,
+                                  ),
                                   size: 32,
                                 ),
                         ),
@@ -589,7 +596,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primary.withValues(alpha: 0.2),
+                                  color: AppTheme.primary.withValues(
+                                    alpha: 0.2,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -621,8 +630,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                         ? AppTheme.accent
                                         : Colors.redAccent,
                                     vehicle.isConnected
-                                        ? AppTheme.accent.withValues(alpha: 0.15)
-                                        : Colors.redAccent.withValues(alpha: 0.15),
+                                        ? AppTheme.accent.withValues(
+                                            alpha: 0.15,
+                                          )
+                                        : Colors.redAccent.withValues(
+                                            alpha: 0.15,
+                                          ),
                                   ),
                                   _buildStatusIndicator(
                                     Icons.battery_charging_full,
@@ -844,7 +857,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     bottom: Radius.circular(22),
                   ),
                   border: Border(
-                    top: BorderSide(color: AppTheme.primary.withValues(alpha: 0.2)),
+                    top: BorderSide(
+                      color: AppTheme.primary.withValues(alpha: 0.2),
+                    ),
                   ),
                 ),
                 child: SizedBox(
@@ -1027,7 +1042,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     bottom: Radius.circular(22),
                   ),
                   border: Border(
-                    top: BorderSide(color: AppTheme.primary.withValues(alpha: 0.2)),
+                    top: BorderSide(
+                      color: AppTheme.primary.withValues(alpha: 0.2),
+                    ),
                   ),
                 ),
                 child: Row(
@@ -1068,26 +1085,22 @@ class _ProfilePageState extends State<ProfilePage> {
                               await VehicleService.addVehicle(vehicle);
                               await _loadUserData(); // Refresh vehicle list
 
-                              if (mounted) {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Vehicle added successfully!',
-                                    ),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              }
+                              if (!context.mounted) return;
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Vehicle added successfully!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
                             } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error adding vehicle: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error adding vehicle: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
                             }
                           }
                         },
@@ -1328,7 +1341,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     bottom: Radius.circular(22),
                   ),
                   border: Border(
-                    top: BorderSide(color: AppTheme.primary.withValues(alpha: 0.2)),
+                    top: BorderSide(
+                      color: AppTheme.primary.withValues(alpha: 0.2),
+                    ),
                   ),
                 ),
                 child: Row(
@@ -1370,26 +1385,24 @@ class _ProfilePageState extends State<ProfilePage> {
                               );
                               await _loadUserData(); // Refresh vehicle list
 
-                              if (mounted) {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Vehicle updated successfully!',
-                                    ),
-                                    backgroundColor: Colors.green,
+                              if (!context.mounted) return;
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Vehicle updated successfully!',
                                   ),
-                                );
-                              }
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
                             } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error updating vehicle: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error updating vehicle: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
                             }
                           }
                         },
@@ -1489,7 +1502,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     bottom: Radius.circular(22),
                   ),
                   border: Border(
-                    top: BorderSide(color: Colors.redAccent.withValues(alpha: 0.2)),
+                    top: BorderSide(
+                      color: Colors.redAccent.withValues(alpha: 0.2),
+                    ),
                   ),
                 ),
                 child: Row(
@@ -1512,26 +1527,22 @@ class _ProfilePageState extends State<ProfilePage> {
                             await VehicleService.deleteVehicle(vehicle.id);
                             await _loadUserData(); // Refresh vehicle list
 
-                            if (mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Vehicle removed successfully!',
-                                  ),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            }
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Vehicle removed successfully!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
                           } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error removing vehicle: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error removing vehicle: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
                           }
                         },
                       ),

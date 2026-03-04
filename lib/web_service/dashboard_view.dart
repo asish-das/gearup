@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class DashboardView extends StatelessWidget {
   const DashboardView({super.key});
@@ -193,7 +194,7 @@ class DashboardView extends StatelessWidget {
                               ),
                               const SizedBox(width: 16),
                               Text(
-                                'October 2023',
+                                DateFormat('MMMM yyyy').format(DateTime.now()),
                                 style: GoogleFonts.manrope(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
@@ -213,52 +214,80 @@ class DashboardView extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: _buildDayCol('MON 23', [
-                              _buildCalEvent(
-                                '09:00 AM',
-                                'Oil Change',
-                                Colors.grey,
-                              ),
-                            ]),
+                            child: _buildDayCol(
+                              '${DateFormat('EE').format(DateTime.now().subtract(const Duration(days: 2)).toLocal()).toUpperCase()} ${DateFormat('dd').format(DateTime.now().subtract(const Duration(days: 2)).toLocal())}',
+                              [
+                                _buildCalEvent(
+                                  '09:00 AM',
+                                  'Oil Change',
+                                  Colors.grey,
+                                ),
+                              ],
+                            ),
                           ),
                           Expanded(
-                            child: _buildDayCol('TUE 24', [
-                              _buildCalEvent(
-                                '10:30 AM',
-                                'Brake\nInspection',
-                                Colors.purple,
-                                sub: 'BMW X5',
-                              ),
-                            ]),
+                            child: _buildDayCol(
+                              '${DateFormat('EE').format(DateTime.now().subtract(const Duration(days: 1)).toLocal()).toUpperCase()} ${DateFormat('dd').format(DateTime.now().subtract(const Duration(days: 1)).toLocal())}',
+                              [
+                                _buildCalEvent(
+                                  '10:30 AM',
+                                  'Brake\nInspection',
+                                  Colors.purple,
+                                  sub: 'BMW X5',
+                                ),
+                              ],
+                            ),
                           ),
                           Expanded(
-                            child: _buildDayCol('WED 25', [
-                              _buildCalEvent(
-                                '08:00 AM',
-                                'Tire\nRotation',
-                                Colors.teal,
-                                sub: 'Tesla Model 3',
-                              ),
-                              _buildCalEvent(
-                                '02:00 PM',
-                                'Engine\nTuning',
-                                Colors.orange,
-                                sub: 'Ford Raptor',
-                              ),
-                            ], isActive: true),
+                            child: _buildDayCol(
+                              '${DateFormat('EE').format(DateTime.now()).toUpperCase()} ${DateFormat('dd').format(DateTime.now())}',
+                              [
+                                _buildCalEvent(
+                                  '08:00 AM',
+                                  'Tire\nRotation',
+                                  Colors.teal,
+                                  sub: 'Tesla Model 3',
+                                ),
+                                _buildCalEvent(
+                                  '02:00 PM',
+                                  'Engine\nTuning',
+                                  Colors.orange,
+                                  sub: 'Ford Raptor',
+                                ),
+                              ],
+                              isActive: true,
+                            ),
                           ),
-                          Expanded(child: _buildDayCol('THU 26', [])),
                           Expanded(
-                            child: _buildDayCol('FRI 27', [
-                              _buildCalEvent(
-                                '11:00 AM',
-                                'Diagnostics',
-                                Colors.grey,
-                              ),
-                            ]),
+                            child: _buildDayCol(
+                              '${DateFormat('EE').format(DateTime.now().add(const Duration(days: 1)).toLocal()).toUpperCase()} ${DateFormat('dd').format(DateTime.now().add(const Duration(days: 1)).toLocal())}',
+                              [],
+                            ),
                           ),
-                          Expanded(child: _buildDayCol('SAT 28', [])),
-                          Expanded(child: _buildDayCol('SUN 29', [])),
+                          Expanded(
+                            child: _buildDayCol(
+                              '${DateFormat('EE').format(DateTime.now().add(const Duration(days: 2)).toLocal()).toUpperCase()} ${DateFormat('dd').format(DateTime.now().add(const Duration(days: 2)).toLocal())}',
+                              [
+                                _buildCalEvent(
+                                  '11:00 AM',
+                                  'Diagnostics',
+                                  Colors.grey,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildDayCol(
+                              '${DateFormat('EE').format(DateTime.now().add(const Duration(days: 3)).toLocal()).toUpperCase()} ${DateFormat('dd').format(DateTime.now().add(const Duration(days: 3)).toLocal())}',
+                              [],
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildDayCol(
+                              '${DateFormat('EE').format(DateTime.now().add(const Duration(days: 4)).toLocal()).toUpperCase()} ${DateFormat('dd').format(DateTime.now().add(const Duration(days: 4)).toLocal())}',
+                              [],
+                            ),
+                          ),
                         ],
                       ),
                     ],

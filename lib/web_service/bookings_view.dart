@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class BookingsView extends StatelessWidget {
   const BookingsView({super.key});
@@ -136,7 +137,8 @@ class BookingsView extends StatelessWidget {
                   vehicle: 'Toyota Camry 2021',
                   service: 'Full Service + Oil Change',
                   bottomLeftLabel: 'Appointment',
-                  bottomLeftValue: 'Oct 24, 09:00 AM',
+                  bottomLeftValue:
+                      '${DateFormat('MMM dd').format(DateTime.now().add(const Duration(days: 1)))}, 09:00 AM',
                   bottomRightLabel: 'Contact',
                   bottomRightValue: '+1 234-567-890',
                   actionButtonLabel: 'Accept Booking',
@@ -152,7 +154,8 @@ class BookingsView extends StatelessWidget {
                   vehicle: 'BMW M4 2022',
                   service: 'Brake Pad Replacement',
                   bottomLeftLabel: 'Appointment',
-                  bottomLeftValue: 'Oct 24, 11:30 AM',
+                  bottomLeftValue:
+                      '${DateFormat('MMM dd').format(DateTime.now().add(const Duration(days: 1)))}, 11:30 AM',
                   bottomRightLabel: 'Status',
                   bottomRightValue: 'Scheduled',
                   bottomRightValueColor: Colors.blue,
@@ -188,7 +191,8 @@ class BookingsView extends StatelessWidget {
                   vehicle: 'Tesla Model 3',
                   service: 'Tire Rotation',
                   bottomLeftLabel: 'Completed At',
-                  bottomLeftValue: 'Today, 08:30 AM',
+                  bottomLeftValue:
+                      'Today, ${DateFormat('hh:mm a').format(DateTime.now())}',
                   bottomRightLabel: 'Bill Amount',
                   bottomRightValue: '\$120.00',
                   bottomRightValueColor: Colors.green,
