@@ -4,6 +4,7 @@ import 'package:gearup/mobile_user/home_dashboard.dart';
 import 'package:gearup/mobile_user/service_centers.dart';
 import 'package:gearup/mobile_user/service_history.dart';
 import 'package:gearup/mobile_user/profile_page.dart';
+import 'package:gearup/mobile_user/service_tracking.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -18,6 +19,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = [
     const HomeDashboard(),
     const ServiceCentersScreen(),
+    const ServiceTrackingScreen(),
     const ServiceHistoryScreen(),
     const ProfilePage(),
   ];
@@ -46,6 +48,10 @@ class _MainNavigationState extends State<MainNavigation> {
             BottomNavigationBarItem(
               icon: Icon(Icons.location_city),
               label: 'CENTERS',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.track_changes),
+              label: 'TRACKING',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.history),
