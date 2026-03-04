@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DashboardView extends StatelessWidget {
   const DashboardView({super.key});
@@ -37,6 +39,8 @@ class DashboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
     return Container(
       color: const Color(0xFFF6F6F8),
       padding: const EdgeInsets.all(32.0),
@@ -108,13 +112,28 @@ class DashboardView extends StatelessWidget {
                 ],
               );
 
-              Widget titleText = Text(
-                "Welcome back, John's Garage",
-                style: GoogleFonts.manrope(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF0F172A),
-                ),
+              Widget titleText = StreamBuilder<DocumentSnapshot>(
+                stream: uid != null
+                    ? FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(uid)
+                          .snapshots()
+                    : const Stream.empty(),
+                builder: (context, snapshot) {
+                  String name = "Garage";
+                  if (snapshot.hasData && snapshot.data!.exists) {
+                    final data = snapshot.data!.data() as Map<String, dynamic>;
+                    name = data['businessName'] ?? data['name'] ?? "Garage";
+                  }
+                  return Text(
+                    "Welcome back, $name",
+                    style: GoogleFonts.manrope(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  );
+                },
               );
 
               return isSmall

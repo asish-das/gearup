@@ -6,6 +6,7 @@ import 'package:gearup/services/auth_service.dart';
 import 'package:gearup/models/user.dart';
 import 'package:gearup/services/vehicle_service.dart';
 import 'package:gearup/models/vehicle.dart';
+import 'package:gearup/mobile_user/service_centers.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -149,7 +150,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     Icons.calendar_month,
                     'Book Service',
                     AppTheme.primary,
-                    () => Navigator.pushNamed(context, '/service_selection'),
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ServiceCentersScreen(),
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 20),
                   _buildQuickAction(

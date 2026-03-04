@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class BookingScreen extends StatefulWidget {
   const BookingScreen({super.key});
@@ -12,6 +14,7 @@ class BookingScreen extends StatefulWidget {
 class _BookingScreenState extends State<BookingScreen> {
   DateTime? _selectedDate;
   String? _selectedTime;
+  bool _isBooking = false;
 
   final List<String> _availableTimes = [
     '09:00 AM',
@@ -59,6 +62,8 @@ class _BookingScreenState extends State<BookingScreen> {
     final String serviceName = args?['name'] ?? 'General Service';
     final String serviceDesc = args?['desc'] ?? 'Standard maintenance';
     final String priceStr = args?['price'] ?? '\$0';
+    final String? serviceCenterId = args?['serviceCenterId'];
+    final String? serviceCenterName = args?['serviceCenterName'];
 
     // Parse price
     final double basePrice =
@@ -84,7 +89,9 @@ class _BookingScreenState extends State<BookingScreen> {
               decoration: BoxDecoration(
                 color: AppTheme.primary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: AppTheme.primary.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
@@ -156,7 +163,9 @@ class _BookingScreenState extends State<BookingScreen> {
                 decoration: BoxDecoration(
                   color: Colors.yellow.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.yellow.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: Colors.yellow.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: const [
@@ -259,7 +268,9 @@ class _BookingScreenState extends State<BookingScreen> {
               decoration: BoxDecoration(
                 color: AppTheme.primary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.1)),
+                border: Border.all(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,14 +319,93 @@ class _BookingScreenState extends State<BookingScreen> {
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: (_selectedDate == null || _selectedTime == null)
+              onPressed:
+                  (_selectedDate == null || _selectedTime == null || _isBooking)
                   ? null
-                  : () {
-                      // Mock confirmation
-                      Navigator.pushNamed(context, '/tracking');
+                  : () async {
+                      if (serviceCenterId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Invalid service center.'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      setState(() {
+                        _isBooking = true;
+                      });
+
+                      try {
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user == null) {
+                          throw Exception('User not logged in');
+                        }
+
+                        // Fetch user data for booking reference
+                        final userDoc = await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user.uid)
+                            .get();
+                        final userData = userDoc.data() ?? {};
+
+                        final bookingData = {
+                          'userId': user.uid,
+                          'customerName': userData['fullName'] ?? 'Customer',
+                          'customerPhone': userData['phoneNumber'] ?? '',
+                          'serviceCenterId': serviceCenterId,
+                          'serviceCenterName':
+                              serviceCenterName ?? 'Service Center',
+                          'serviceName': serviceName,
+                          'date': _selectedDate!.toIso8601String(),
+                          'time': _selectedTime,
+                          'totalAmount': total,
+                          'status': 'pending',
+                          'createdAt': FieldValue.serverTimestamp(),
+                        };
+
+                        final docRef = await FirebaseFirestore.instance
+                            .collection('bookings')
+                            .add(bookingData);
+
+                        if (!context.mounted) return;
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Booking confirmed!')),
+                        );
+                        // Navigate to tracking or back to home
+                        Navigator.pushNamed(
+                          context,
+                          '/tracking',
+                          arguments: {
+                            'trackingId': docRef.id,
+                            'serviceName': serviceName,
+                          },
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to book: \$e')),
+                        );
+                      } finally {
+                        if (mounted) {
+                          setState(() {
+                            _isBooking = false;
+                          });
+                        }
+                      }
                     },
-              icon: const Icon(Icons.check_circle),
-              label: const Text('Confirm Appointment'),
+              icon: _isBooking
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.check_circle),
+              label: Text(_isBooking ? 'Processing...' : 'Confirm Appointment'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,

@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class ServiceCentersScreen extends StatelessWidget {
+class ServiceCentersScreen extends StatefulWidget {
   const ServiceCentersScreen({super.key});
 
+  @override
+  State<ServiceCentersScreen> createState() => _ServiceCentersScreenState();
+}
+
+class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -12,8 +18,8 @@ class ServiceCentersScreen extends StatelessWidget {
       // AppBar
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: AppTheme.backgroundDark.withValues(alpha: 
-          0.8,
+        backgroundColor: AppTheme.backgroundDark.withValues(
+          alpha: 0.8,
         ), // Instead of withValues(alpha: 0.8), standard transparency handle
         title: const Text(
           'GearUp Service Centers',
@@ -59,44 +65,68 @@ class ServiceCentersScreen extends StatelessWidget {
 
           // List
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildCenterCard(
-                  name: 'Speedy Auto Care',
-                  distance: '1.2 miles away • Downtown Hub',
-                  description:
-                      'Expert maintenance for all luxury and performance gear. State-of-the-art diagnostic tools.',
-                  rating: '4.8',
-                  imageUrl:
-                      'https://lh3.googleusercontent.com/aida-public/AB6AXuAu4gZNyYevjnp06ETfWRrdIhl1oUtantlkielsVMaeqNlm0mxRL61heh7NUOkL4QS_tK9DNSRL_rXAmotcBKQNPbxZ56vzZjlIuLh4exqunRof52ZAtUMeY98rQPVignqnnOocCm5sZWwE_L3Ywpy_uX6EQhJITsPh3g4DgF6ukC7H8YAMCf6uSTmUAzAFUsWxl4rySu3iEH8ZAGKvpXgIbgostPy8xGeifStalIdkO_uEYyWnZRaVnwklh2BKhE2xsrNMHDnCrl4',
-                  status: 'AVAILABLE',
-                ),
-                const SizedBox(height: 16),
-                _buildCenterCard(
-                  name: 'GearUp Elite Center',
-                  distance: '2.5 miles away • West District',
-                  description:
-                      'Specializing in performance tuning and high-end diagnostics. Authorized GearUp Platinum Partner.',
-                  rating: '4.9',
-                  imageUrl:
-                      'https://lh3.googleusercontent.com/aida-public/AB6AXuDAoimAE0GK98Y2wNkJBjpohX_uLJUd7_jhssoYSAS_qElG5y_EV5AznieWY8wU6lh9mOfbQ5qX6gj8znL-g1GkKtWoLJH3DDB3NbAWSR8ivvpxiA7XGPC8HMw7Km7UGSc2iP3yAH5aGfF0T0tIJJCri6Jn3ZcNsAAy6BgUUqGiWKtkNBXdGyWdBVN0ZVsPwK8XprlqonF2lLwuq32RUBgNGuTZPWhsSe-sX5khfX81Doh3yH4erUBRx022YY-AS3CvPdIdLPD5-S0',
-                  status: 'TOP RATED',
-                  statusColor: AppTheme.primary,
-                ),
-                const SizedBox(height: 16),
-                _buildCenterCard(
-                  name: 'Precision Motors',
-                  distance: '3.8 miles away • East Industrial',
-                  description:
-                      'Quick service and express oil changes. No appointment needed for basic maintenance packages.',
-                  rating: '4.7',
-                  imageUrl:
-                      'https://lh3.googleusercontent.com/aida-public/AB6AXuAHgvJ2ppTu2hYXeBmGA-7Zov3TMmFYm4kp0fMjZEyzERA9gPGyWZkVFeDzkrGlfwDKSD5GqP_zrq0wTtjTiqlL-1MWWVwiqb6a7Qvnx9WD9zNLEp6h5u2PhPtM5ZmI_gCFfRj6iWyxs3fSyrNcXyl09r37YcZa6kLnwENE63JSt7MUu-8XZC0EcFZ8MEoBvJQKvprRtHgvOxp5OALIbkrzNhyXyysf1Z5iLCsniztq24TeHD8uD5jlVhZ7lyGhBasFhZIMjv8-V6U',
-                  customFooterStr: 'Open until 10:00 PM',
-                ),
-                const SizedBox(height: 32),
-              ],
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .where('role', isEqualTo: 'serviceCenter')
+                  .where('status', isEqualTo: 'approved')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error loading centers',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  );
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primary),
+                  );
+                }
+
+                final centers = snapshot.data?.docs ?? [];
+
+                if (centers.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No service centers found.',
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: centers.length,
+                  itemBuilder: (context, index) {
+                    final data = centers[index].data() as Map<String, dynamic>;
+                    final docId = centers[index].id;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _buildCenterCard(
+                        context: context,
+                        uid: docId,
+                        name:
+                            data['businessName'] ??
+                            data['name'] ??
+                            'Unknown Center',
+                        distance: data['address'] ?? 'Location not specified',
+                        description:
+                            'Professional vehicle maintenance and repair services.',
+                        rating: '4.8', // Mock rating for now
+                        imageUrl: data['profileImageUrl']?.isNotEmpty == true
+                            ? data['profileImageUrl']
+                            : 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+                        status: 'AVAILABLE',
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -131,6 +161,8 @@ class ServiceCentersScreen extends StatelessWidget {
   }
 
   Widget _buildCenterCard({
+    required BuildContext context,
+    required String uid,
     required String name,
     required String distance,
     required String description,
@@ -140,151 +172,161 @@ class ServiceCentersScreen extends StatelessWidget {
     Color statusColor = AppTheme.accent,
     String? customFooterStr,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF261933),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF4d3267)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image
-          Stack(
-            children: [
-              Image(
-                image: CachedNetworkImageProvider(imageUrl),
-                width: double.infinity,
-                height: 180,
-                fit: BoxFit.cover,
-              ),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+    return InkWell(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/service_selection',
+          arguments: {'serviceCenterId': uid, 'serviceCenterName': name},
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF261933),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF4d3267)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image
+            Stack(
+              children: [
+                Image(
+                  image: CachedNetworkImageProvider(imageUrl),
+                  width: double.infinity,
+                  height: 180,
+                  fit: BoxFit.cover,
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star, color: Colors.amber, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          rating,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                ),
+              ],
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        rating,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: Colors.white,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              distance,
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (status != null)
+                        Text(
+                          status,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (customFooterStr != null)
+                        Text(
+                          customFooterStr,
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                          ),
+                        )
+                      else
+                        const SizedBox(), // Empty if null (can add avatar stack here if requested, but simplifying)
+
+                      ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.accent,
+                          foregroundColor: AppTheme.backgroundDark,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                        child: const Text(
+                          'Book Now',
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-          // Content
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            distance,
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (status != null)
-                      Text(
-                        status,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  description,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    if (customFooterStr != null)
-                      Text(
-                        customFooterStr,
-                        style: const TextStyle(
-                          color: Colors.white54,
-                          fontSize: 12,
-                        ),
-                      )
-                    else
-                      const SizedBox(), // Empty if null (can add avatar stack here if requested, but simplifying)
-
-                    ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accent,
-                        foregroundColor: AppTheme.backgroundDark,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                      ),
-                      child: const Text(
-                        'Book Now',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

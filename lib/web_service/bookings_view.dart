@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class BookingData {
   final String id;
@@ -24,6 +26,22 @@ class BookingData {
     required this.amount,
     this.progressVal = 0.0,
   });
+
+  factory BookingData.fromMap(Map<String, dynamic> map, String docId) {
+    return BookingData(
+      id: docId,
+      name: map['name'] ?? 'Unknown',
+      status: map['status'] ?? 'PENDING',
+      vehicle: map['vehicle'] ?? 'Unknown Vehicle',
+      service: map['service'] ?? 'General Service',
+      appointmentDate: map['appointmentDate'] != null
+          ? (map['appointmentDate'] as Timestamp).toDate()
+          : DateTime.now(),
+      contact: map['contact'] ?? 'Unknown Contact',
+      amount: (map['amount'] ?? 0.0).toDouble(),
+      progressVal: (map['progressVal'] ?? 0.0).toDouble(),
+    );
+  }
 }
 
 class BookingsView extends StatefulWidget {
@@ -45,70 +63,25 @@ class _BookingsViewState extends State<BookingsView> {
     'Completed',
   ];
 
-  late List<BookingData> _bookings;
-
   @override
   void initState() {
     super.initState();
-    _bookings = [
-      BookingData(
-        id: '#BK-8291',
-        name: 'Sarah Jenkins',
-        status: 'PENDING',
-        vehicle: 'Toyota Camry 2021',
-        service: 'Full Service + Oil Change',
-        appointmentDate: DateTime.now().add(const Duration(days: 1)),
-        contact: '+1 234-567-890',
-        amount: 240.0,
-      ),
-      BookingData(
-        id: '#BK-8292',
-        name: 'Marcus Thorne',
-        status: 'ACCEPTED',
-        vehicle: 'BMW M4 2022',
-        service: 'Brake Pad Replacement',
-        appointmentDate: DateTime.now().add(
-          const Duration(days: 1, hours: 2, minutes: 30),
-        ),
-        contact: '+1 987-654-321',
-        amount: 180.0,
-      ),
-      BookingData(
-        id: '#BK-8293',
-        name: 'David Chen',
-        status: 'IN SERVICE',
-        vehicle: 'Audi Q7 2020',
-        service: 'Engine Diagnostic',
-        appointmentDate: DateTime.now().subtract(const Duration(hours: 1)),
-        contact: '+1 555-123-456',
-        amount: 320.0,
-        progressVal: 0.75,
-      ),
-      BookingData(
-        id: '#BK-8290',
-        name: 'Elena Rossi',
-        status: 'COMPLETED',
-        vehicle: 'Tesla Model 3',
-        service: 'Tire Rotation',
-        appointmentDate: DateTime.now().subtract(const Duration(hours: 4)),
-        contact: '+1 444-987-654',
-        amount: 120.0,
-        progressVal: 1.0,
-      ),
-    ];
   }
 
-  void _updateStatus(BookingData booking) {
-    setState(() {
-      if (booking.status == 'PENDING') {
-        booking.status = 'ACCEPTED';
-      } else if (booking.status == 'ACCEPTED') {
-        booking.status = 'IN SERVICE';
-        booking.progressVal = 0.1;
-      } else if (booking.status == 'IN SERVICE') {
-        booking.status = 'COMPLETED';
-        booking.progressVal = 1.0;
-      } else if (booking.status == 'COMPLETED') {
+  Future<void> _updateStatus(BookingData booking) async {
+    String newStatus = booking.status;
+    double newProgress = booking.progressVal;
+
+    if (booking.status == 'PENDING') {
+      newStatus = 'ACCEPTED';
+    } else if (booking.status == 'ACCEPTED') {
+      newStatus = 'IN SERVICE';
+      newProgress = 0.1;
+    } else if (booking.status == 'IN SERVICE') {
+      newStatus = 'COMPLETED';
+      newProgress = 1.0;
+    } else if (booking.status == 'COMPLETED') {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Viewing receipt for ${booking.id}...'),
@@ -116,7 +89,24 @@ class _BookingsViewState extends State<BookingsView> {
           ),
         );
       }
-    });
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('bookings')
+          .doc(booking.id)
+          .update({'status': newStatus, 'progressVal': newProgress});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update status: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showNewBookingDialog() {
@@ -130,54 +120,88 @@ class _BookingsViewState extends State<BookingsView> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredBookings = _bookings.where((booking) {
-      final matchesFilter =
-          _activeFilter == 'All' ||
-          booking.status.toUpperCase() == _activeFilter.toUpperCase();
-      final matchesSearch =
-          booking.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          booking.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          booking.vehicle.toLowerCase().contains(_searchQuery.toLowerCase());
-      return matchesFilter && matchesSearch;
-    }).toList();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    return Container(
-      color: const Color(0xFFF6F6F8),
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeaderRow(),
-          const SizedBox(height: 32),
-          _buildFiltersRow(),
-          const SizedBox(height: 32),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                int crossAxisCount = 1;
-                if (constraints.maxWidth >= 1400) {
-                  crossAxisCount = 3;
-                } else if (constraints.maxWidth >= 900) {
-                  crossAxisCount = 2;
-                }
+    return StreamBuilder<QuerySnapshot>(
+      stream: uid != null
+          ? FirebaseFirestore.instance
+                .collection('bookings')
+                .where('serviceCenterId', isEqualTo: uid)
+                .snapshots()
+          : const Stream.empty(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Center(child: Text('Something went wrong'));
+        }
 
-                return GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: 24,
-                    mainAxisSpacing: 24,
-                    childAspectRatio: crossAxisCount == 1 ? 2.5 : 1.6,
-                  ),
-                  itemCount: filteredBookings.length,
-                  itemBuilder: (context, index) {
-                    return _buildDynamicBookingCard(filteredBookings[index]);
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        List<BookingData> bookings = [];
+        if (snapshot.hasData) {
+          bookings = snapshot.data!.docs.map((doc) {
+            return BookingData.fromMap(
+              doc.data() as Map<String, dynamic>,
+              doc.id,
+            );
+          }).toList();
+        }
+
+        final filteredBookings = bookings.where((booking) {
+          final matchesFilter =
+              _activeFilter == 'All' ||
+              booking.status.toUpperCase() == _activeFilter.toUpperCase();
+          final matchesSearch =
+              booking.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              booking.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              booking.vehicle.toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              );
+          return matchesFilter && matchesSearch;
+        }).toList();
+
+        return Container(
+          color: const Color(0xFFF6F6F8),
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeaderRow(),
+              const SizedBox(height: 32),
+              _buildFiltersRow(),
+              const SizedBox(height: 32),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    int crossAxisCount = 1;
+                    if (constraints.maxWidth >= 1400) {
+                      crossAxisCount = 3;
+                    } else if (constraints.maxWidth >= 900) {
+                      crossAxisCount = 2;
+                    }
+
+                    return GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 24,
+                        mainAxisSpacing: 24,
+                        childAspectRatio: crossAxisCount == 1 ? 2.5 : 1.6,
+                      ),
+                      itemCount: filteredBookings.length,
+                      itemBuilder: (context, index) {
+                        return _buildDynamicBookingCard(
+                          filteredBookings[index],
+                        );
+                      },
+                    );
                   },
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

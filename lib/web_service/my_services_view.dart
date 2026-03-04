@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class MyServicesView extends StatefulWidget {
   const MyServicesView({super.key});
@@ -11,72 +13,91 @@ class MyServicesView extends StatefulWidget {
 class _MyServicesViewState extends State<MyServicesView> {
   int _currentTab = 0; // 0: Active, 1: Slot Management, 2: Archived
 
-  // Mock State for Slot Management
+  bool _isLoading = true;
+  String? _error;
+
   double _dailyLimit = 12.0;
   bool _autoAccept = true;
+  List<Map<String, dynamic>> _slots = [];
+  List<Map<String, dynamic>> _services = [];
 
-  // 0: Available, 1: Booked, 2: Blocked/Unavailable
-  final List<Map<String, dynamic>> _slots = [
-    {'time': '08:00 AM', 'status': 0},
-    {'time': '09:00 AM', 'status': 1},
-    {'time': '10:00 AM', 'status': 0},
-    {'time': '11:00 AM', 'status': 0},
-    {'time': '12:00 PM', 'status': 1},
-    {'time': '01:00 PM', 'status': 2},
-    {'time': '02:00 PM', 'status': 0},
-    {'time': '03:00 PM', 'status': 0},
-    {'time': '04:00 PM', 'status': 1},
-    {'time': '05:00 PM', 'status': 0},
-  ];
+  final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  // Mock Data for Services
-  final List<Map<String, dynamic>> _services = [
-    {
-      'id': '1',
-      'title': 'Brake Pad Replacement',
-      'desc': 'Premium ceramic brake pads installation for passenger vehicles.',
-      'price': '\$80.00',
-      'time': '1.5 hrs',
-      'icon': Icons.car_repair,
-      'isPopular': true,
-      'isActive': true,
-      'isArchived': false,
-    },
-    {
-      'id': '2',
-      'title': 'Full Synthetic Oil Change',
-      'desc':
-          'Includes filter replacement and 5-quart high-grade synthetic oil.',
-      'price': '\$65.00',
-      'time': '45 mins',
-      'icon': Icons.oil_barrel,
-      'isPopular': false,
-      'isActive': true,
-      'isArchived': false,
-    },
-    {
-      'id': '3',
-      'title': 'AC System Recharge',
-      'desc': 'Coolant refill and leak inspection for R134a systems.',
-      'price': '\$120.00',
-      'time': '1.0 hr',
-      'icon': Icons.ac_unit,
-      'isPopular': false,
-      'isActive': false,
-      'isArchived': false,
-    },
-    {
-      'id': '4',
-      'title': 'Wiper Blade Replacement',
-      'desc': 'Front and rear premium wiper blade replacement.',
-      'price': '\$35.00',
-      'time': '15 mins',
-      'icon': Icons.water_drop,
-      'isPopular': false,
-      'isActive': false,
-      'isArchived': true,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchRealtimeData();
+  }
+
+  void _fetchRealtimeData() {
+    if (uid.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _error = 'User not authenticated';
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    FirebaseFirestore.instance.collection('users').doc(uid).snapshots().listen((
+      docSnapshot,
+    ) {
+      if (docSnapshot.exists && mounted) {
+        final data = docSnapshot.data() as Map<String, dynamic>;
+        final slotConfig = data['slotConfig'] as Map<String, dynamic>? ?? {};
+
+        final dailyLimit =
+            (slotConfig['dailyLimit'] as num?)?.toDouble() ?? 12.0;
+        final autoAccept = slotConfig['autoAccept'] as bool? ?? true;
+
+        final List<dynamic> slotsList =
+            slotConfig['slots'] ??
+            [
+              {'time': '08:00 AM', 'status': 0},
+              {'time': '09:00 AM', 'status': 0},
+              {'time': '10:00 AM', 'status': 0},
+              {'time': '11:00 AM', 'status': 0},
+              {'time': '12:00 PM', 'status': 0},
+              {'time': '01:00 PM', 'status': 0},
+              {'time': '02:00 PM', 'status': 0},
+              {'time': '03:00 PM', 'status': 0},
+              {'time': '04:00 PM', 'status': 0},
+              {'time': '05:00 PM', 'status': 0},
+            ];
+
+        final slots = slotsList
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+
+        setState(() {
+          _dailyLimit = dailyLimit;
+          _autoAccept = autoAccept;
+          _slots = slots;
+        });
+      }
+    });
+
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('services')
+        .snapshots()
+        .listen((querySnapshot) {
+          if (mounted) {
+            final services = querySnapshot.docs.map((doc) {
+              final data = doc.data();
+              data['id'] = doc.id;
+              return data;
+            }).toList();
+
+            setState(() {
+              _services = services;
+              _isLoading = false;
+            });
+          }
+        });
+  }
 
   void _showAddEditServiceDialog([Map<String, dynamic>? service]) {
     final bool isEdit = service != null;
@@ -190,40 +211,42 @@ class _MyServicesViewState extends State<MyServicesView> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
+                    if (uid.isEmpty) return;
+
+                    final serviceData = {
+                      'title': titleController.text.isNotEmpty
+                          ? titleController.text
+                          : 'New Service',
+                      'desc': descController.text.isNotEmpty
+                          ? descController.text
+                          : 'Description',
+                      'price': priceController.text.isNotEmpty
+                          ? priceController.text
+                          : '\$0.00',
+                      'time': timeController.text.isNotEmpty
+                          ? timeController.text
+                          : '0 min',
+                      'isPopular': isPopular,
+                    };
+
                     if (isEdit) {
-                      setState(() {
-                        service['title'] = titleController.text;
-                        service['desc'] = descController.text;
-                        service['price'] = priceController.text;
-                        service['time'] = timeController.text;
-                        service['isPopular'] = isPopular;
-                      });
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(uid)
+                          .collection('services')
+                          .doc(service['id'])
+                          .update(serviceData);
                     } else {
-                      setState(() {
-                        _services.add({
-                          'id': DateTime.now().millisecondsSinceEpoch
-                              .toString(),
-                          'title': titleController.text.isNotEmpty
-                              ? titleController.text
-                              : 'New Service',
-                          'desc': descController.text.isNotEmpty
-                              ? descController.text
-                              : 'Description',
-                          'price': priceController.text.isNotEmpty
-                              ? priceController.text
-                              : '\$0.00',
-                          'time': timeController.text.isNotEmpty
-                              ? timeController.text
-                              : '0 min',
-                          'icon': Icons.build,
-                          'isPopular': isPopular,
-                          'isActive': true,
-                          'isArchived': false,
-                        });
-                      });
+                      serviceData['isActive'] = true;
+                      serviceData['isArchived'] = false;
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(uid)
+                          .collection('services')
+                          .add(serviceData);
                     }
-                    Navigator.pop(context);
+                    if (context.mounted) Navigator.pop(context);
                   },
                   child: Text(
                     isEdit ? 'Save Changes' : 'Add Service',
@@ -238,19 +261,85 @@ class _MyServicesViewState extends State<MyServicesView> {
     );
   }
 
-  void _toggleServiceStatus(Map<String, dynamic> service, bool isActive) {
-    setState(() {
-      service['isActive'] = isActive;
-    });
+  Future<void> _loadDemoServices() async {
+    if (uid.isEmpty) return;
+
+    setState(() => _isLoading = true);
+
+    final demoServices = [
+      {
+        'title': 'General Oil Change',
+        'desc': 'Full synthetic oil change including filter replacement.',
+        'price': '\$49.99',
+        'time': '30 min',
+        'isPopular': true,
+        'isActive': true,
+        'isArchived': false,
+      },
+      {
+        'title': 'Brake Pad Replacement',
+        'desc':
+            'High quality ceramic brake pads installation for front or rear wheels.',
+        'price': '\$129.99',
+        'time': '1.5 hr',
+        'isPopular': false,
+        'isActive': true,
+        'isArchived': false,
+      },
+      {
+        'title': 'Full Detailing',
+        'desc': 'Interior and exterior detailing with waxing and tire shine.',
+        'price': '\$99.00',
+        'time': '2 hr',
+        'isPopular': true,
+        'isActive': true,
+        'isArchived': false,
+      },
+    ];
+
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final collection = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('services');
+
+      for (var service in demoServices) {
+        batch.set(collection.doc(), service);
+      }
+
+      await batch.commit();
+    } catch (e) {
+      debugPrint('Error adding demo services: \$e');
+    }
   }
 
-  void _toggleArchiveStatus(Map<String, dynamic> service) {
-    setState(() {
-      service['isArchived'] = !(service['isArchived'] as bool);
-      if (service['isArchived']) {
-        service['isActive'] = false;
-      }
-    });
+  Future<void> _toggleServiceStatus(
+    Map<String, dynamic> service,
+    bool isActive,
+  ) async {
+    if (uid.isEmpty) return;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('services')
+        .doc(service['id'])
+        .update({'isActive': isActive});
+  }
+
+  Future<void> _toggleArchiveStatus(Map<String, dynamic> service) async {
+    if (uid.isEmpty) return;
+    final bool isArchived = !(service['isArchived'] as bool? ?? false);
+    final updates = <String, dynamic>{'isArchived': isArchived};
+    if (isArchived) {
+      updates['isActive'] = false;
+    }
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('services')
+        .doc(service['id'])
+        .update(updates);
   }
 
   @override
@@ -397,6 +486,17 @@ class _MyServicesViewState extends State<MyServicesView> {
   }
 
   Widget _buildContent(bool isDesktop) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF5D40D4)),
+      );
+    }
+    if (_error != null) {
+      return Center(
+        child: Text(_error!, style: GoogleFonts.manrope(color: Colors.red)),
+      );
+    }
+
     if (_currentTab == 1) {
       return _buildSlotManagement(isDesktop);
     }
@@ -413,9 +513,37 @@ class _MyServicesViewState extends State<MyServicesView> {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(32.0),
-              child: Text(
-                isArchivedTab ? 'No archived services' : 'No active services.',
-                style: GoogleFonts.manrope(color: Colors.grey, fontSize: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isArchivedTab
+                        ? 'No archived services'
+                        : 'No active services.',
+                    style: GoogleFonts.manrope(
+                      color: Colors.grey,
+                      fontSize: 16,
+                    ),
+                  ),
+                  if (!isArchivedTab) ...[
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _loadDemoServices,
+                      icon: const Icon(Icons.auto_awesome, color: Colors.white),
+                      label: Text(
+                        'Load Demo Services',
+                        style: GoogleFonts.manrope(color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5D40D4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           );
@@ -735,12 +863,26 @@ class _MyServicesViewState extends State<MyServicesView> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Slot preferences saved.'),
-                        ),
-                      );
+                    onPressed: () async {
+                      if (uid.isEmpty) return;
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(uid)
+                          .set({
+                            'slotConfig': {
+                              'dailyLimit': _dailyLimit,
+                              'autoAccept': _autoAccept,
+                              'slots': _slots,
+                            },
+                          }, SetOptions(merge: true));
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Slot preferences saved.'),
+                          ),
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF5D40D4),
@@ -879,7 +1021,7 @@ class _MyServicesViewState extends State<MyServicesView> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              service['icon'],
+              Icons.home_repair_service,
               color: isArchived ? Colors.grey : const Color(0xFF5D40D4),
             ),
           ),
