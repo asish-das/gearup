@@ -216,6 +216,7 @@ class _CustomersViewState extends State<CustomersView> {
 
                         Widget customerList = _buildCustomerList(
                           filteredCustomers,
+                          isMobile: !isDesktop,
                         );
                         Widget customerDetails = _buildCustomerDetails(
                           _selectedCustomer,
@@ -253,7 +254,10 @@ class _CustomersViewState extends State<CustomersView> {
     );
   }
 
-  Widget _buildCustomerList(List<CustomerData> customers) {
+  Widget _buildCustomerList(
+    List<CustomerData> customers, {
+    bool isMobile = false,
+  }) {
     if (customers.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(32),
@@ -307,15 +311,26 @@ class _CustomersViewState extends State<CustomersView> {
               ],
             ),
           ),
-          Expanded(
-            child: ListView.builder(
+          if (isMobile)
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: customers.length,
               itemBuilder: (context, index) {
                 final customer = customers[index];
                 return _buildCustomerRow(customer);
               },
+            )
+          else
+            Expanded(
+              child: ListView.builder(
+                itemCount: customers.length,
+                itemBuilder: (context, index) {
+                  final customer = customers[index];
+                  return _buildCustomerRow(customer);
+                },
+              ),
             ),
-          ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: const BoxDecoration(
