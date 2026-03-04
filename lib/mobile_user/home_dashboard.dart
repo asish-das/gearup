@@ -7,6 +7,7 @@ import 'package:gearup/models/user.dart';
 import 'package:gearup/services/vehicle_service.dart';
 import 'package:gearup/models/vehicle.dart';
 import 'package:gearup/mobile_user/service_centers.dart';
+import 'package:gearup/mobile_user/main_navigation.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -169,7 +170,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     Icons.history,
                     'History',
                     AppTheme.primary,
-                    () {},
+                    () => Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MainNavigation(initialIndex: 3),
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 20),
                   _buildQuickAction(
@@ -307,35 +313,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: _primaryVehicle!.isConnected
-                                            ? AppTheme.accent
-                                            : Colors.redAccent,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _primaryVehicle!.isConnected
-                                          ? 'CONNECTED'
-                                          : 'DISCONNECTED',
-                                      style: TextStyle(
-                                        color: _primaryVehicle!.isConnected
-                                            ? AppTheme.accent
-                                            : Colors.redAccent,
-                                        fontSize: 10,
-                                        letterSpacing: 1.5,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
                                 Text(
                                   _primaryVehicle!.displayName,
                                   style: const TextStyle(
@@ -350,49 +327,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: AppTheme.primary.withValues(alpha: 0.5),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.battery_charging_full,
-                                  size: 14,
-                                  color: AppTheme.primary,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _primaryVehicle!.batteryDisplay,
-                                  style: const TextStyle(
-                                    color: AppTheme.primary,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildVehicleStat(Icons.bolt, 'RANGE', '320 mi'),
-                          _buildVehicleStat(Icons.thermostat, 'CABIN', '68°F'),
-                        ],
-                      ),
+
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
@@ -442,43 +379,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
         ),
         child: Icon(Icons.directions_car, color: AppTheme.primary, size: 48),
       ),
-    );
-  }
-
-  Widget _buildVehicleStat(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white10,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: AppTheme.accent, size: 24),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 
