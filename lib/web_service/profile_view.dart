@@ -202,33 +202,38 @@ class _ProfileViewState extends State<ProfileView> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Container(
       color: const Color(0xFFF6F6F8),
-      padding: const EdgeInsets.all(32.0),
+      padding: EdgeInsets.all(isDesktop ? 32.0 : 16.0),
       child: ListView(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Profile & Settings',
-                    style: GoogleFonts.manrope(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF0F172A),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Profile & Settings',
+                      style: GoogleFonts.manrope(
+                        fontSize: isDesktop ? 28 : 24,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF0F172A),
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Manage your garage details and operating preferences.',
-                    style: GoogleFonts.manrope(
-                      fontSize: 16,
-                      color: const Color(0xFF64748B),
+                    Text(
+                      'Manage your garage details and operating preferences.',
+                      style: GoogleFonts.manrope(
+                        fontSize: 16,
+                        color: const Color(0xFF64748B),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -237,287 +242,212 @@ class _ProfileViewState extends State<ProfileView> {
           const SizedBox(height: 32),
 
           // Section 1: Business Details
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 1,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          _buildResponsiveSection(
+            isDesktop: isDesktop,
+            title: 'Business Details',
+            subtitle:
+                'Basic information about your service center visible to customers.',
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      'Business Details',
-                      style: GoogleFonts.manrope(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF0F172A),
+                    Container(
+                      width: isMobile ? 60 : 80,
+                      height: isMobile ? 60 : 80,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.image,
+                        color: const Color(0xFF94A3B8),
+                        size: isMobile ? 24 : 32,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Basic information about your service center visible to customers.',
-                      style: GoogleFonts.manrope(
-                        fontSize: 14,
-                        color: const Color(0xFF64748B),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Garage Logo',
+                            style: GoogleFonts.manrope(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Recommended: 400x400px, PNG or JPG.',
+                            style: GoogleFonts.manrope(
+                              fontSize: 12,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Image upload coming soon!'),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              'UPLOAD NEW',
+                              style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF5D40D4),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 48),
-              Expanded(
-                flex: 2,
-                child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                const SizedBox(height: 32),
+                _buildTextField('Garage Name', _garageNameController),
+                const SizedBox(height: 24),
+                _buildTextField('Business Address', _addressController),
+                const SizedBox(height: 24),
+                if (isMobile) ...[
+                  _buildTextField(
+                    'Contact Email',
+                    _emailController,
+                    enabled: false,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 24),
+                  _buildTextField('Phone Number', _phoneController),
+                ] else ...[
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.image,
-                              color: Color(0xFF94A3B8),
-                              size: 32,
-                            ),
-                          ),
-                          const SizedBox(width: 24),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Garage Logo',
-                                style: GoogleFonts.manrope(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Recommended: 400x400px, PNG or JPG.',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 12,
-                                  color: const Color(0xFF64748B),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              GestureDetector(
-                                onTap: () {
-                                  // TODO: Implement image upload
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Image upload coming soon!',
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: Text(
-                                  'UPLOAD NEW',
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF5D40D4),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                      Expanded(
+                        child: _buildTextField(
+                          'Contact Email',
+                          _emailController,
+                          enabled: false,
+                        ),
                       ),
-                      const SizedBox(height: 32),
-                      _buildTextField('Garage Name', _garageNameController),
-                      const SizedBox(height: 24),
-                      _buildTextField('Business Address', _addressController),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              'Contact Email',
-                              _emailController,
-                              enabled: false,
-                            ),
-                          ),
-                          const SizedBox(width: 24),
-                          Expanded(
-                            child: _buildTextField(
-                              'Phone Number',
-                              _phoneController,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: _buildTextField(
+                          'Phone Number',
+                          _phoneController,
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ),
-            ],
+                ],
+              ],
+            ),
           ),
 
           const SizedBox(height: 48),
 
           // Section 2: Operating Hours
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 1,
+          _buildResponsiveSection(
+            isDesktop: isDesktop,
+            title: 'Operating Hours',
+            subtitle: 'Set your weekly schedule and break times.',
+            content: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: isDesktop
+                    ? null
+                    : 600, // ensure horizontal scroll works correctly on narrow screens
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Operating Hours',
-                      style: GoogleFonts.manrope(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF0F172A),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Text('DAY', style: _headerStyle()),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text('OPEN', style: _headerStyle()),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text('CLOSE', style: _headerStyle()),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Text('STATUS', style: _headerStyle()),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Set your weekly schedule and break times.',
-                      style: GoogleFonts.manrope(
-                        fontSize: 14,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
+                    const SizedBox(height: 24),
+                    for (String day in [
+                      'Monday',
+                      'Tuesday',
+                      'Wednesday',
+                      'Thursday',
+                      'Friday',
+                      'Saturday',
+                      'Sunday',
+                    ])
+                      _buildHoursRow(day),
                   ],
                 ),
               ),
-              const SizedBox(width: 48),
-              Expanded(
-                flex: 2,
-                child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: Text('DAY', style: _headerStyle()),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text('OPEN', style: _headerStyle()),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text('CLOSE', style: _headerStyle()),
-                          ),
-                          Expanded(
-                            flex: 1,
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: Text('STATUS', style: _headerStyle()),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      for (String day in [
-                        'Monday',
-                        'Tuesday',
-                        'Wednesday',
-                        'Thursday',
-                        'Friday',
-                        'Saturday',
-                        'Sunday',
-                      ])
-                        _buildHoursRow(day),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
 
           const SizedBox(height: 48),
 
           // Section 3: Service Categories
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 1,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Service Categories',
-                      style: GoogleFonts.manrope(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Select the types of services you provide at this location.',
-                      style: GoogleFonts.manrope(
-                        fontSize: 14,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 48),
-              Expanded(
-                flex: 2,
-                child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
+          _buildResponsiveSection(
+            isDesktop: isDesktop,
+            title: 'Service Categories',
+            subtitle:
+                'Select the types of services you provide at this location.',
+            content: Column(
+              children: [
+                if (isMobile) ...[
+                  _buildCategoryCard('Mechanic'),
+                  const SizedBox(height: 16),
+                  _buildCategoryCard('Wash & Detail'),
+                  const SizedBox(height: 16),
+                  _buildCategoryCard('Tire Shop'),
+                  const SizedBox(height: 16),
+                  _buildCategoryCard('Electrical'),
+                  const SizedBox(height: 16),
+                  _buildCategoryCard('Oil & Fluids'),
+                  const SizedBox(height: 16),
+                  _buildCategoryCard('Body Shop'),
+                ] else ...[
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Expanded(child: _buildCategoryCard('Mechanic')),
-                          const SizedBox(width: 24),
-                          Expanded(child: _buildCategoryCard('Wash & Detail')),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(child: _buildCategoryCard('Tire Shop')),
-                          const SizedBox(width: 24),
-                          Expanded(child: _buildCategoryCard('Electrical')),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(child: _buildCategoryCard('Oil & Fluids')),
-                          const SizedBox(width: 24),
-                          Expanded(child: _buildCategoryCard('Body Shop')),
-                        ],
-                      ),
+                      Expanded(child: _buildCategoryCard('Mechanic')),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildCategoryCard('Wash & Detail')),
                     ],
                   ),
-                ),
-              ),
-            ],
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(child: _buildCategoryCard('Tire Shop')),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildCategoryCard('Electrical')),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(child: _buildCategoryCard('Oil & Fluids')),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildCategoryCard('Body Shop')),
+                    ],
+                  ),
+                ],
+              ],
+            ),
           ),
 
           const SizedBox(height: 48),
@@ -535,9 +465,9 @@ class _ProfileViewState extends State<ProfileView> {
                   _loadProfile();
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 14,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 16 : 24,
+                    vertical: isMobile ? 12 : 14,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.transparent,
@@ -558,9 +488,9 @@ class _ProfileViewState extends State<ProfileView> {
               InkWell(
                 onTap: () => _saveProfile(),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 14,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 16 : 24,
+                    vertical: isMobile ? 12 : 14,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF5D40D4),
@@ -581,6 +511,91 @@ class _ProfileViewState extends State<ProfileView> {
         ],
       ),
     );
+  }
+
+  Widget _buildResponsiveSection({
+    required bool isDesktop,
+    required String title,
+    required String subtitle,
+    required Widget content,
+  }) {
+    if (isDesktop) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.manrope(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 48),
+          Expanded(
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: content,
+            ),
+          ),
+        ],
+      );
+    } else {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.manrope(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: GoogleFonts.manrope(
+              fontSize: 14,
+              color: const Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: content,
+          ),
+        ],
+      );
+    }
   }
 
   Widget _buildTextField(
