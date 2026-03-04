@@ -211,6 +211,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
     final status = data['status'] ?? 'PENDING';
     final vehicle = data['vehicle'] ?? 'Unknown Vehicle';
     final service = data['service'] ?? 'General Service';
+    final deliveryOption = data['deliveryOption'] as String?;
 
     double progressVal = (data['progressVal'] ?? 0.0).toDouble();
     if (status == 'PENDING') {
@@ -498,19 +499,127 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
             ),
           ),
           const SizedBox(height: 24),
+          if (isCompleted && deliveryOption == null) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.primary.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Service Complete! Choose receiving method:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: () => FirebaseFirestore.instance
+                              .collection('bookings')
+                              .doc(doc.id)
+                              .update({'deliveryOption': 'pickup'}),
+                          icon: const Icon(
+                            Icons.storefront,
+                            color: Colors.white,
+                          ),
+                          label: const Text(
+                            'Self Pickup',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accent,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: () => FirebaseFirestore.instance
+                              .collection('bookings')
+                              .doc(doc.id)
+                              .update({'deliveryOption': 'delivery'}),
+                          icon: const Icon(
+                            Icons.delivery_dining,
+                            color: AppTheme.backgroundDark,
+                          ),
+                          label: const Text(
+                            'Delivery',
+                            style: TextStyle(color: AppTheme.backgroundDark),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ] else if (isCompleted && deliveryOption != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              decoration: BoxDecoration(
+                color: AppTheme.successGreen.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppTheme.successGreen.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    deliveryOption == 'pickup'
+                        ? Icons.storefront
+                        : Icons.delivery_dining,
+                    color: AppTheme.successGreen,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Selected: ${deliveryOption.toUpperCase()}',
+                    style: const TextStyle(
+                      color: AppTheme.successGreen,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => const MainNavigation()),
+                MaterialPageRoute(
+                  builder: (_) =>
+                      MainNavigation(initialIndex: isCompleted ? 3 : 0),
+                ),
                 (route) => false,
               );
             },
-            icon: const Icon(Icons.home),
-            label: const Text('Back to Home'),
+            icon: Icon(isCompleted ? Icons.receipt_long : Icons.home),
+            label: Text(
+              isCompleted ? 'View Receipt in History' : 'Back to Home',
+            ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              foregroundColor: Colors.white,
+              backgroundColor: isCompleted ? AppTheme.accent : AppTheme.primary,
+              foregroundColor: isCompleted
+                  ? AppTheme.backgroundDark
+                  : Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),

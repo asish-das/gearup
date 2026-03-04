@@ -2,133 +2,208 @@ import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class ServiceHistoryScreen extends StatelessWidget {
+class ServiceHistoryScreen extends StatefulWidget {
   const ServiceHistoryScreen({super.key});
 
   @override
+  State<ServiceHistoryScreen> createState() => _ServiceHistoryScreenState();
+}
+
+class _ServiceHistoryScreenState extends State<ServiceHistoryScreen> {
+  User? currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    currentUser = FirebaseAuth.instance.currentUser;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundDark,
-      appBar: AppBar(
-        elevation: 0,
+    if (currentUser == null) {
+      return Scaffold(
         backgroundColor: AppTheme.backgroundDark,
-        centerTitle: true,
-        automaticallyImplyLeading: false, // Hidden when in Bottom Navigation
-        title: const Text(
-          'Service History',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {},
+        body: const Center(
+          child: Text(
+            'Please log in to view history.',
+            style: TextStyle(color: Colors.white),
           ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: Container(
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Color(0xFF4d3267))),
-            ),
-            child: Row(
+        ),
+      );
+    }
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundDark,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: AppTheme.backgroundDark,
+          centerTitle: true,
+          automaticallyImplyLeading: false,
+          title: const Text(
+            'Service History',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          ),
+          bottom: const TabBar(
+            indicatorColor: AppTheme.primary,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white54,
+            tabs: [
+              Tab(text: 'Past Services'),
+              Tab(text: 'Upcoming'),
+            ],
+          ),
+        ),
+        body: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('bookings')
+              .where('userId', isEqualTo: currentUser!.uid)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(color: AppTheme.primary),
+              );
+            }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(
+                child: Text(
+                  'No services found.',
+                  style: TextStyle(color: Colors.white54),
+                ),
+              );
+            }
+
+            final docs = snapshot.data!.docs;
+            final sortedDocs = docs.toList()
+              ..sort((a, b) {
+                final aData = a.data() as Map<String, dynamic>;
+                final bData = b.data() as Map<String, dynamic>;
+                final aDate =
+                    (aData['appointmentDate'] as Timestamp?)?.toDate() ??
+                    (aData['createdAt'] as Timestamp?)?.toDate() ??
+                    DateTime.now();
+                final bDate =
+                    (bData['appointmentDate'] as Timestamp?)?.toDate() ??
+                    (bData['createdAt'] as Timestamp?)?.toDate() ??
+                    DateTime.now();
+                return bDate.compareTo(aDate);
+              });
+
+            final pastDocs = sortedDocs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final status = (data['status'] as String?)?.toUpperCase() ?? '';
+              return ['COMPLETED', 'REJECTED', 'CANCELLED'].contains(status);
+            }).toList();
+
+            final upcomingDocs = sortedDocs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final status = (data['status'] as String?)?.toUpperCase() ?? '';
+              return [
+                'PENDING',
+                'ACCEPTED',
+                'IN_PROGRESS',
+                'IN SERVICE',
+              ].contains(status);
+            }).toList();
+
+            return TabBarView(
               children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: AppTheme.primary, width: 2),
-                      ),
-                    ),
-                    child: const Text(
-                      'Past Services',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: Colors.transparent, width: 2),
-                      ),
-                    ),
-                    child: const Text(
-                      'Upcoming',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
+                _buildList(pastDocs, isPast: true),
+                _buildList(upcomingDocs, isPast: false),
               ],
-            ),
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildServiceEntry(
-              title: 'Full Engine Tune-up',
-              date: DateFormat(
-                'MMM dd, yyyy',
-              ).format(DateTime.now().subtract(const Duration(days: 30))),
-              location: 'GearUp Central Hub',
-              price: '\$245.00',
-              icon: Icons.settings_suggest,
-              imageUrl:
-                  'https://lh3.googleusercontent.com/aida-public/AB6AXuB0q6iJWXWLUdi_sYx8c9Ia0kVnyib6brZU7j5oIOs-c9dEfdkH7afjQMu2L_bDYXHmWaPR421qqUtCzrXM2O3tnFShm0ZipYddhGUUlsTXL1GINM7FEnXugETh1VG58ALiRuEHwp29H-jaie86V6iAE_bIgAXJ8ZSVF_dZ2G31vGO3zkUzdLv7mzTAozYlVe8HfgUHqu2LLu1FSqsiUf8FxYC0-wiURQ0URJHYqC6HpvAc7etn7o4IcrGMbK8di73e891MHjcd4Oc',
-              isFirst: true,
-            ),
-            _buildServiceEntry(
-              title: 'Brake Pad Replacement',
-              date: DateFormat(
-                'MMM dd, yyyy',
-              ).format(DateTime.now().subtract(const Duration(days: 65))),
-              location: 'East Side Garage',
-              price: '\$189.50',
-              icon: Icons.tire_repair,
-              imageUrl:
-                  'https://lh3.googleusercontent.com/aida-public/AB6AXuDXlk0K2C5JL3LQsHQBNG8F3bn3GlqlBdgrTiL3nKNcicFr4kV4o2HBGkKi9ZNDoVUKuALqD95rGRslgee-Ap7EsWqkc_8WLA4E-ZCLZI4pVrDoZ_cwa8dVr7gJy0_AkNOVH7VOp6Uhk0dfTGPAmtgOfFXPdg1QMzbDEH_ABILl14um1pYHTIA_5FBy6SPPZ544NlwUTwRv0puqN15Ecf6xUVIjlnlb7TgRioP94ehI1LyjoJmZ-3yCaAqR11XX_et7bamDhkl5rNw',
-            ),
-            _buildServiceEntry(
-              title: 'Oil & Filter Change',
-              date: DateFormat(
-                'MMM dd, yyyy',
-              ).format(DateTime.now().subtract(const Duration(days: 120))),
-              location: 'GearUp Express',
-              price: '\$85.00',
-              icon: Icons.oil_barrel,
-              imageUrl:
-                  'https://lh3.googleusercontent.com/aida-public/AB6AXuCUnratjf45PkYrKyseW73FGfvsiTPUkoUbrPmgRQYYynpIJXOMuh6bB3ztsjl2zvEtTtaWsKfKTrMP6FPpyyqKh1dhjmiFAiNEM9cuclkWR-Fzss5xsHcfgFEveree3YaMxYLqBvE8TZDWHL7ALCCFdl97DB_B_39SPCs6fV9o2XTIV4odI0EsC9gSIjsXE5azFIfHq8qqmZrTUPosKyV0c7g4oT_RZBvKjDwZYmjWqeT4rKF1M0L7Ueh7tJ4y64oxJIYGtuRaBwo',
-              isLast: true,
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
+  Widget _buildList(List<QueryDocumentSnapshot> docs, {required bool isPast}) {
+    if (docs.isEmpty) {
+      return Center(
+        child: Text(
+          isPast ? 'No past services found.' : 'No upcoming services found.',
+          style: const TextStyle(color: Colors.white54),
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: docs.length,
+      itemBuilder: (context, index) {
+        final doc = docs[index];
+        final data = doc.data() as Map<String, dynamic>;
+
+        final title = data['service'] ?? 'General Service';
+        final vehicle = data['vehicle'] ?? 'Unknown Vehicle';
+        final status = data['status'] ?? 'UNKNOWN';
+        final price = data['amount'] != null
+            ? '\$${(data['amount'] as num).toStringAsFixed(2)}'
+            : '\$0.00';
+        final date =
+            (data['appointmentDate'] as Timestamp?)?.toDate() ??
+            (data['createdAt'] as Timestamp?)?.toDate() ??
+            DateTime.now();
+        final dateStr = DateFormat('MMM dd, yyyy').format(date);
+        final location = data['serviceCenterName'] ?? 'GearUp Service Center';
+
+        // Dynamic icon logic
+        IconData icon = Icons.settings_suggest;
+        if (title.toLowerCase().contains('oil')) {
+          icon = Icons.oil_barrel;
+        }
+        if (title.toLowerCase().contains('brake') ||
+            title.toLowerCase().contains('tire')) {
+          icon = Icons.tire_repair;
+        }
+
+        return _buildServiceEntry(
+          title: title,
+          subtitle: vehicle,
+          status: status,
+          date: dateStr,
+          location: location,
+          price: price,
+          icon: icon,
+          imageUrl:
+              'https://lh3.googleusercontent.com/aida-public/AB6AXuBr7wk28RrPX4KcQ5ArovZK7lQ45_yrnIN5OL8xKr_6NQPK-v6eHCtKJAUG5ClosQfMnm9iJNf_M5-sFuqSEwf2ACFnIcECeZXYHvwU6ggl9pyCgxV0y2LoEwiVNdd6DHTkpvUJJcHzsQ2pPBAuAGEudo3pyOfjPE-ESafoUwwfFteRunQ0OpFcKYeK9dG2FO-MhMiT7Soxl1HZeQz2rymbSKAnJlCn8eutNkTRCoegElLE4vn5d5GomiOMi-D5wb1N6ZN42t_TbWI',
+          isFirst: index == 0,
+          isLast: index == docs.length - 1,
+          data: data,
+          isPast: isPast,
+        );
+      },
+    );
+  }
+
   Widget _buildServiceEntry({
     required String title,
+    required String subtitle,
+    required String status,
     required String date,
     required String location,
     required String price,
     required IconData icon,
     required String imageUrl,
-    bool isFirst = false,
-    bool isLast = false,
+    required bool isFirst,
+    required bool isLast,
+    required Map<String, dynamic> data,
+    required bool isPast,
   }) {
+    Color statusColor = AppTheme.accent;
+    if (status.toUpperCase() == 'REJECTED' ||
+        status.toUpperCase() == 'CANCELLED') {
+      statusColor = Colors.red;
+    }
+    if (status.toUpperCase() == 'PENDING') {
+      statusColor = Colors.orange;
+    }
+
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -170,10 +245,10 @@ class ServiceHistoryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'COMPLETED',
+                  Text(
+                    status.toUpperCase(),
                     style: TextStyle(
-                      color: AppTheme.accent,
+                      color: statusColor,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.5,
@@ -188,10 +263,15 @@ class ServiceHistoryScreen extends StatelessWidget {
                       color: Colors.white,
                     ),
                   ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 14, color: Colors.white70),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     '$date • $location',
-                    style: const TextStyle(fontSize: 14, color: Colors.white54),
+                    style: const TextStyle(fontSize: 13, color: Colors.white54),
                   ),
                   const SizedBox(height: 12),
 
@@ -219,9 +299,9 @@ class ServiceHistoryScreen extends StatelessWidget {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Total Paid',
-                                    style: TextStyle(
+                                  Text(
+                                    isPast ? 'Total Paid' : 'Amount',
+                                    style: const TextStyle(
                                       color: Colors.white54,
                                       fontSize: 12,
                                     ),
@@ -236,27 +316,34 @@ class ServiceHistoryScreen extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              ElevatedButton.icon(
-                                onPressed: () {},
-                                icon: const Icon(
-                                  Icons.receipt_long,
-                                  color: AppTheme.accent,
-                                  size: 16,
-                                ),
-                                label: const Text(
-                                  'Invoice View',
-                                  style: TextStyle(color: AppTheme.accent),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primary.withValues(
-                                    alpha: 0.2,
-                                  ), // Use withValues if flutter version allows, string building takes withOpacity here implicitly
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                              if (status.toUpperCase() == 'COMPLETED')
+                                ElevatedButton.icon(
+                                  onPressed: () => _viewReceipt(
+                                    title,
+                                    subtitle,
+                                    location,
+                                    price,
+                                    date,
+                                    data,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.receipt_long,
+                                    color: AppTheme.accent,
+                                    size: 16,
+                                  ),
+                                  label: const Text(
+                                    'View Receipt',
+                                    style: TextStyle(color: AppTheme.accent),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primary
+                                        .withValues(alpha: 0.2),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
                                   ),
                                 ),
-                              ),
                             ],
                           ),
                         ),
@@ -264,6 +351,111 @@ class ServiceHistoryScreen extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _viewReceipt(
+    String title,
+    String subtitle,
+    String location,
+    String price,
+    String date,
+    Map<String, dynamic> data,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: AppTheme.backgroundDark,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Receipt',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white54),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const Divider(color: Colors.white24),
+                const SizedBox(height: 12),
+                _receiptRow('Service', title),
+                _receiptRow('Vehicle', subtitle),
+                _receiptRow('Center', location),
+                _receiptRow('Date', date),
+                const SizedBox(height: 16),
+                const Divider(color: Colors.white24),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Total Paid',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      price,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _receiptRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
