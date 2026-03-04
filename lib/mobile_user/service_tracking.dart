@@ -133,13 +133,23 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           });
 
         // Try to find an active one, otherwise just show latest
-        final activeDoc = sortedDocs.firstWhere((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          final status = data['status'] ?? '';
-          return status == 'PENDING' || status == 'IN_PROGRESS';
-        }, orElse: () => sortedDocs.first);
+        QueryDocumentSnapshot? activeDoc;
+        try {
+          activeDoc = sortedDocs.firstWhere((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final status = data['status'] ?? '';
+            return status == 'PENDING' || status == 'IN_PROGRESS';
+          });
+        } catch (e) {
+          // If no active booking found, use the latest one
+          activeDoc = sortedDocs.isNotEmpty ? sortedDocs.first : null;
+        }
 
-        return _buildBookingProgress(activeDoc);
+        if (activeDoc != null) {
+          return _buildBookingProgress(activeDoc);
+        } else {
+          return _buildNoActiveService();
+        }
       },
     );
   }
