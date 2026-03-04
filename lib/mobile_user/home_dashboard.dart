@@ -307,55 +307,82 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   child: Column(
                     children: [
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _primaryVehicle!.displayName,
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ],
+                            child: Text(
+                              _primaryVehicle!.displayName,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
+                          if (_primaryVehicle!.licensePlate.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppTheme.primary.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                _primaryVehicle!.licensePlate.toUpperCase(),
+                                style: const TextStyle(
+                                  color: AppTheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
-
                       const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(
-                            Icons.key,
-                            color: AppTheme.backgroundDark,
-                          ),
-                          label: const Text(
-                            'Unlock Vehicle',
-                            style: TextStyle(
-                              color: AppTheme.backgroundDark,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildDetailItem(
+                              Icons.business,
+                              'MAKE',
+                              _primaryVehicle!.make,
                             ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.accent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                            _buildDetailItem(
+                              Icons.directions_car,
+                              'MODEL',
+                              _primaryVehicle!.model,
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            elevation: 4,
-                            shadowColor: AppTheme.accent.withValues(alpha: 0.5),
-                          ),
+                            _buildDetailItem(
+                              Icons.calendar_today,
+                              'YEAR',
+                              _primaryVehicle!.year,
+                            ),
+                            _buildDetailItem(
+                              Icons.palette,
+                              'COLOR',
+                              _primaryVehicle!.color,
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -366,6 +393,41 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDetailItem(IconData icon, String label, String value) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.primary.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppTheme.primary, size: 22),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white54,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value.isNotEmpty ? value : '-',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 
