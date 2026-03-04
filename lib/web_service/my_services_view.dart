@@ -15,6 +15,20 @@ class _MyServicesViewState extends State<MyServicesView> {
   double _dailyLimit = 12.0;
   bool _autoAccept = true;
 
+  // 0: Available, 1: Booked, 2: Blocked/Unavailable
+  final List<Map<String, dynamic>> _slots = [
+    {'time': '08:00 AM', 'status': 0},
+    {'time': '09:00 AM', 'status': 1},
+    {'time': '10:00 AM', 'status': 0},
+    {'time': '11:00 AM', 'status': 0},
+    {'time': '12:00 PM', 'status': 1},
+    {'time': '01:00 PM', 'status': 2},
+    {'time': '02:00 PM', 'status': 0},
+    {'time': '03:00 PM', 'status': 0},
+    {'time': '04:00 PM', 'status': 1},
+    {'time': '05:00 PM', 'status': 0},
+  ];
+
   // Mock Data for Services
   final List<Map<String, dynamic>> _services = [
     {
@@ -544,54 +558,155 @@ class _MyServicesViewState extends State<MyServicesView> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                Text(
-                  'Peak Hour Availability',
-                  style: GoogleFonts.manrope(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F172A),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Daily Slots Availability',
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.circle,
+                          size: 10,
+                          color: Color(0xFF10B981),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Available',
+                          style: GoogleFonts.manrope(fontSize: 12),
+                        ),
+                        const SizedBox(width: 12),
+                        const Icon(
+                          Icons.circle,
+                          size: 10,
+                          color: Color(0xFFEF4444),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Booked',
+                          style: GoogleFonts.manrope(fontSize: 12),
+                        ),
+                        const SizedBox(width: 12),
+                        const Icon(
+                          Icons.circle,
+                          size: 10,
+                          color: Color(0xFF94A3B8),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Blocked',
+                          style: GoogleFonts.manrope(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF5D40D4),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '09:00 - 13:00',
-                        style: GoogleFonts.manrope(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                  children: List.generate(_slots.length, (index) {
+                    final slot = _slots[index];
+                    Color bgColor;
+                    Color textColor;
+                    if (slot['status'] == 0) {
+                      // Available
+                      bgColor = const Color(0xFFEEF2FF);
+                      textColor = const Color(0xFF5D40D4);
+                    } else if (slot['status'] == 1) {
+                      // Booked
+                      bgColor = const Color(0xFFFEE2E2);
+                      textColor = const Color(0xFFDC2626);
+                    } else {
+                      // Blocked
+                      bgColor = const Color(0xFFF1F5F9);
+                      textColor = const Color(0xFF64748B);
+                    }
+
+                    return PopupMenuButton<int>(
+                      tooltip: 'Change slot status',
+                      onSelected: (int value) {
+                        setState(() {
+                          _slots[index]['status'] = value;
+                        });
+                      },
+                      itemBuilder: (BuildContext context) =>
+                          <PopupMenuEntry<int>>[
+                            PopupMenuItem<int>(
+                              value: 0,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle_outline,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Available',
+                                    style: GoogleFonts.manrope(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem<int>(
+                              value: 1,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.event_busy,
+                                    color: Color(0xFFEF4444),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text('Booked', style: GoogleFonts.manrope()),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem<int>(
+                              value: 2,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.block,
+                                    color: Color(0xFF94A3B8),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text('Blocked', style: GoogleFonts.manrope()),
+                                ],
+                              ),
+                            ),
+                          ],
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: bgColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: slot['status'] == 0
+                                ? const Color(0xFFC7D2FE)
+                                : slot['status'] == 1
+                                ? const Color(0xFFFECACA)
+                                : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Text(
+                          slot['time'],
+                          style: GoogleFonts.manrope(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '14:00 - 18:00',
-                        style: GoogleFonts.manrope(
-                          color: const Color(0xFF64748B),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+                    );
+                  }),
                 ),
                 const SizedBox(height: 32),
                 Row(
