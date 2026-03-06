@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -12,9 +13,10 @@ class ProfileView extends StatefulWidget {
 
 class _ProfileViewState extends State<ProfileView> {
   final _garageNameController = TextEditingController();
-  final _addressController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _imageUrlController = TextEditingController();
 
   bool _isLoading = true;
 
@@ -73,9 +75,10 @@ class _ProfileViewState extends State<ProfileView> {
         if (mounted) {
           setState(() {
             _garageNameController.text = data['businessName'] ?? '';
-            _addressController.text = data['address'] ?? '';
             _emailController.text = data['email'] ?? '';
             _phoneController.text = data['phoneNumber'] ?? '';
+            _descriptionController.text = data['description'] ?? '';
+            _imageUrlController.text = data['profileImageUrl'] ?? '';
 
             if (data['operatingHours'] != null) {
               final hours = data['operatingHours'] as Map<String, dynamic>;
@@ -123,8 +126,9 @@ class _ProfileViewState extends State<ProfileView> {
     try {
       await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
         'businessName': _garageNameController.text.trim(),
-        'address': _addressController.text.trim(),
         'phoneNumber': _phoneController.text.trim(),
+        'description': _descriptionController.text.trim(),
+        'profileImageUrl': _imageUrlController.text.trim(),
         // Cannot update auth email safely here, just contact email optionally:
         'email': _emailController.text.trim(),
         'operatingHours': _operatingHours,
@@ -160,9 +164,10 @@ class _ProfileViewState extends State<ProfileView> {
   @override
   void dispose() {
     _garageNameController.dispose();
-    _addressController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _descriptionController.dispose();
+    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -322,23 +327,8 @@ class _ProfileViewState extends State<ProfileView> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Image upload coming soon!'),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              'UPLOAD NEW',
-                              style: GoogleFonts.manrope(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF5D40D4),
-                              ),
-                            ),
-                          ),
+                          const SizedBox(height: 8),
+                          _buildTextField('Logo URL', _imageUrlController),
                         ],
                       ),
                     ),
@@ -346,8 +336,6 @@ class _ProfileViewState extends State<ProfileView> {
                 ),
                 const SizedBox(height: 32),
                 _buildTextField('Garage Name', _garageNameController),
-                const SizedBox(height: 24),
-                _buildTextField('Business Address', _addressController),
                 const SizedBox(height: 24),
                 if (isMobile) ...[
                   _buildTextField(
@@ -377,6 +365,12 @@ class _ProfileViewState extends State<ProfileView> {
                     ],
                   ),
                 ],
+                const SizedBox(height: 24),
+                _buildTextField(
+                  'Business Description',
+                  _descriptionController,
+                  maxLines: 3,
+                ),
               ],
             ),
           ),
@@ -451,6 +445,78 @@ class _ProfileViewState extends State<ProfileView> {
             ),
           ),
 
+          const SizedBox(height: 48),
+          // Section 4: Account & Security
+          _buildResponsiveSection(
+            isDesktop: isDesktop,
+            title: 'Account & Security',
+            subtitle: 'Manage your login credentials and security.',
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Registered Email',
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _emailController.text,
+                  style: GoogleFonts.manrope(
+                    fontSize: 16,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final email = _emailController.text.trim();
+                    if (email.isNotEmpty) {
+                      try {
+                        await AuthService.resetPassword(email);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Password reset email sent to $email',
+                              ),
+                              backgroundColor: const Color(0xFF10B981),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.lock_reset, size: 20),
+                  label: const Text('Send Password Reset Email'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF5D40D4),
+                    side: const BorderSide(color: Color(0xFF5D40D4)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 48),
           const Divider(color: Color(0xFFE2E8F0)),
           const SizedBox(height: 24),
@@ -603,6 +669,7 @@ class _ProfileViewState extends State<ProfileView> {
     String label,
     TextEditingController controller, {
     bool enabled = true,
+    int maxLines = 1,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,6 +692,7 @@ class _ProfileViewState extends State<ProfileView> {
           child: TextField(
             controller: controller,
             enabled: enabled,
+            maxLines: maxLines,
             style: GoogleFonts.manrope(
               fontSize: 14,
               color: const Color(0xFF0F172A),

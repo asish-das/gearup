@@ -1,18 +1,227 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class RevenueView extends StatelessWidget {
+class RevenueView extends StatefulWidget {
   const RevenueView({super.key});
 
   @override
+  State<RevenueView> createState() => _RevenueViewState();
+}
+
+class _RevenueViewState extends State<RevenueView> {
+  bool _isLoading = true;
+  double _todayRevenue = 0;
+  double _weeklyRevenue = 0;
+  double _monthlyRevenue = 0;
+  double _totalRevenue = 0;
+  double _avgOrderValue = 0;
+  String _topService = 'None';
+  int _topServiceCount = 0;
+  List<Map<String, dynamic>> _recentTransactions = [];
+  List<double> _chartData = List.filled(7, 0.0);
+  List<String> _chartLabels = List.filled(7, '');
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePlaceholders();
+    _fetchRevenueData();
+  }
+
+  void _initializePlaceholders() {
+    final today = DateTime.now();
+    List<String> labels = [];
+    for (int i = 6; i >= 0; i--) {
+      final d = today.subtract(Duration(days: i));
+      labels.add(DateFormat('E').format(d));
+    }
+    setState(() {
+      _chartLabels = labels;
+    });
+  }
+
+  Future<void> _fetchRevenueData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
+      final startOfMonth = DateTime(now.year, now.month, 1);
+
+      // For chart: last 7 days including today
+      List<double> dailyRev = List.filled(7, 0.0);
+      List<String> labels = [];
+      for (int i = 6; i >= 0; i--) {
+        final d = today.subtract(Duration(days: i));
+        labels.add(DateFormat('E').format(d));
+      }
+
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('serviceCenterId', isEqualTo: user.uid)
+          .get();
+
+      // Sort in-memory to avoid the need for a manually created composite index in Firebase Console
+      final sortedDocs = querySnapshot.docs.toList()
+        ..sort((a, b) {
+          final aDate =
+              (a.data()['appointmentDate'] as Timestamp?)?.toDate() ??
+              DateTime(2000);
+          final bDate =
+              (b.data()['appointmentDate'] as Timestamp?)?.toDate() ??
+              DateTime(2000);
+          return bDate.compareTo(aDate); // Descending order (latest first)
+        });
+
+      double todayRev = 0;
+      double weekRev = 0;
+      double monthRev = 0;
+      double totalRev = 0;
+      int totalBookings = sortedDocs.length;
+      Map<String, int> serviceCounts = {};
+      List<Map<String, dynamic>> transactions = [];
+
+      for (var doc in sortedDocs) {
+        final data = doc.data();
+        final amount = (data['amount'] ?? 0.0).toDouble();
+        final status = data['status'] ?? 'PENDING';
+        final appointmentDate =
+            (data['appointmentDate'] as Timestamp?)?.toDate() ?? DateTime(2000);
+        final apptDay = DateTime(
+          appointmentDate.year,
+          appointmentDate.month,
+          appointmentDate.day,
+        );
+        final service = data['serviceName'] ?? data['service'] ?? 'Unknown';
+
+        totalRev += amount;
+
+        if (apptDay == today) {
+          todayRev += amount;
+        }
+        if (appointmentDate.isAfter(
+          startOfWeek.subtract(const Duration(seconds: 1)),
+        )) {
+          weekRev += amount;
+        }
+        if (appointmentDate.isAfter(
+          startOfMonth.subtract(const Duration(seconds: 1)),
+        )) {
+          monthRev += amount;
+        }
+
+        // Chart data (last 7 days)
+        final diffDays = today.difference(apptDay).inDays;
+        if (diffDays >= 0 && diffDays < 7) {
+          dailyRev[6 - diffDays] += amount;
+        }
+
+        serviceCounts[service] = (serviceCounts[service] ?? 0) + 1;
+
+        if (transactions.length < 10) {
+          transactions.add({
+            'id': doc.id.substring(0, 8).toUpperCase(),
+            'date': DateFormat('MMM dd, yyyy').format(appointmentDate),
+            'customer': data['customerName'] ?? data['name'] ?? 'Customer',
+            'amount': '\$${amount.toStringAsFixed(2)}',
+            'status': status,
+            'color': _getStatusColor(status),
+          });
+        }
+      }
+
+      String topSrv = 'None';
+      int topSrvCnt = 0;
+      serviceCounts.forEach((srv, srvCount) {
+        if (srvCount > topSrvCnt) {
+          topSrvCnt = srvCount;
+          topSrv = srv;
+        }
+      });
+
+      setState(() {
+        _todayRevenue = todayRev;
+        _weeklyRevenue = weekRev;
+        _monthlyRevenue = monthRev;
+        _totalRevenue = totalRev;
+        _avgOrderValue = totalBookings > 0 ? totalRev / totalBookings : 0;
+        _topService = topSrv;
+        _topServiceCount = topSrvCnt;
+        _recentTransactions = transactions;
+        _chartData = dailyRev;
+        _chartLabels = labels;
+        _errorMessage = null;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching revenue: $e');
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  MaterialColor _getStatusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'PAID':
+      case 'COMPLETED':
+        return Colors.green;
+      case 'PENDING':
+      case 'CONFIRMED':
+        return Colors.amber;
+      case 'CANCELLED':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Container(
       color: const Color(0xFFF6F6F8),
       padding: const EdgeInsets.all(32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_errorMessage != null)
+            Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Error: $_errorMessage\n(Tip: Check if Firestore composite indices are created in Firebase Console)',
+                      style: GoogleFonts.manrope(
+                        color: Colors.red.shade900,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -26,6 +235,11 @@ class RevenueView extends StatelessWidget {
               ),
               Row(
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _fetchRevenueData,
+                  ),
+                  const SizedBox(width: 16),
                   const Icon(
                     Icons.notifications_none,
                     color: Color(0xFF64748B),
@@ -46,25 +260,128 @@ class RevenueView extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildMetricCard(
-                  title: 'TOTAL REVENUE (MONTH)',
-                  value: '\$42,850.00',
-                  subtitle: 'vs. \$38,120.00 last month',
-                  badgeText: '+12.5%',
+                  title: "TODAY'S REVENUE",
+                  value: '\$${_todayRevenue.toStringAsFixed(2)}',
+                  subtitle: 'Confirmed earnings today',
+                  badgeText: 'Live',
                   isPositive: true,
-                  icon: Icons.trending_up,
+                  icon: Icons.today,
+                  iconColor: Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: _buildMetricCard(
+                  title: 'THIS WEEK',
+                  value: '\$${_weeklyRevenue.toStringAsFixed(2)}',
+                  subtitle: 'Total revenue this week',
+                  badgeText:
+                      '+${(_weeklyRevenue / (_totalRevenue > 0 ? _totalRevenue : 1) * 100).toStringAsFixed(1)}%',
+                  isPositive: true,
+                  icon: Icons.calendar_view_week,
+                  iconColor: const Color(0xFF5D40D4),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: _buildMetricCard(
+                  title: 'THIS MONTH',
+                  value: '\$${_monthlyRevenue.toStringAsFixed(2)}',
+                  subtitle: 'Monthly accumulated',
+                  badgeText: '~',
+                  isPositive: true,
+                  icon: Icons.calendar_month,
                   iconColor: Colors.green,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          // Chart Section
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Last 7 Days Revenue',
+                  style: GoogleFonts.manrope(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  height: 150,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: List.generate(7, (index) {
+                      final value = _chartData[index];
+                      final maxValue = _chartData.reduce(
+                        (a, b) => a > b ? a : b,
+                      );
+                      final heightFactor = maxValue > 0
+                          ? value / maxValue
+                          : 0.0;
+
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            width: 30,
+                            height: (120 * heightFactor).clamp(4, 120),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF5D40D4),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _chartLabels[index],
+                            style: GoogleFonts.manrope(
+                              fontSize: 12,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricCard(
+                  title: 'LIFETIME REVENUE',
+                  value: '\$${_totalRevenue.toStringAsFixed(2)}',
+                  subtitle: 'Total historical earnings',
+                  badgeText: 'All Time',
+                  isPositive: true,
+                  icon: Icons.account_balance_wallet,
+                  iconColor: Colors.orange,
                 ),
               ),
               const SizedBox(width: 24),
               Expanded(
                 child: _buildMetricCard(
                   title: 'AVG. ORDER VALUE',
-                  value: '\$345.00',
-                  subtitle: 'Increase in high-ticket diagnostic services',
-                  badgeText: '+4.2%',
+                  value: '\$${_avgOrderValue.toStringAsFixed(2)}',
+                  subtitle: 'Per booking average',
+                  badgeText: '~',
                   isPositive: true,
                   icon: Icons.analytics,
-                  iconColor: const Color(0xFF5D40D4),
+                  iconColor: Colors.teal,
                 ),
               ),
               const SizedBox(width: 24),
@@ -83,7 +400,7 @@ class RevenueView extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'TOP PERFORMING SERVICE',
+                            'TOP SERVICE',
                             style: GoogleFonts.manrope(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -95,16 +412,18 @@ class RevenueView extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Engine Diagnostics',
+                        _topService,
                         style: GoogleFonts.manrope(
-                          fontSize: 24,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFF0F172A),
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '142 bookings this month',
+                        '$_topServiceCount bookings',
                         style: GoogleFonts.manrope(
                           fontSize: 14,
                           color: const Color(0xFF94A3B8),
@@ -117,143 +436,7 @@ class RevenueView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '30-Day Revenue Trend',
-                          style: GoogleFonts.manrope(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF0F172A),
-                          ),
-                        ),
-                        Text(
-                          'Daily earnings visualization',
-                          style: GoogleFonts.manrope(
-                            fontSize: 14,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Export CSV',
-                            style: GoogleFonts.manrope(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF0F172A),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF5D40D4),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'View Details',
-                            style: GoogleFonts.manrope(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Wavy chart placeholder
-                Container(
-                  height: 150,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF10B981).withValues(alpha: 0.2),
-                        Colors.white,
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                    border: const Border(
-                      bottom: BorderSide(color: Color(0xFF10B981), width: 2),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'Week 1',
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF94A3B8),
-                        ),
-                      ),
-                      Text(
-                        'Week 2',
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF94A3B8),
-                        ),
-                      ),
-                      Text(
-                        'Week 3',
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF94A3B8),
-                        ),
-                      ),
-                      Text(
-                        'Week 4',
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF94A3B8),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
+          // Transaction Table
           Expanded(
             child: Container(
               decoration: BoxDecoration(
@@ -274,40 +457,6 @@ class RevenueView extends StatelessWidget {
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: const Color(0xFF0F172A),
-                          ),
-                        ),
-                        Container(
-                          width: 250,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const SizedBox(width: 12),
-                              const Icon(
-                                Icons.search,
-                                color: Color(0xFF94A3B8),
-                                size: 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: TextField(
-                                  decoration: InputDecoration(
-                                    hintText: 'Search payments...',
-                                    hintStyle: GoogleFonts.manrope(
-                                      color: const Color(0xFF94A3B8),
-                                      fontSize: 14,
-                                    ),
-                                    border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.only(
-                                      bottom: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
                           ),
                         ),
                       ],
@@ -347,67 +496,31 @@ class RevenueView extends StatelessWidget {
                           flex: 2,
                           child: Text('STATUS', style: _headerStyle()),
                         ),
-                        Expanded(
-                          flex: 1,
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Text('ACTION', style: _headerStyle()),
-                          ),
-                        ),
                       ],
                     ),
                   ),
                   Expanded(
-                    child: ListView(
-                      children: [
-                        _buildTxRow(
-                          '#TRX-8291',
-                          DateFormat('MMM dd, yyyy').format(DateTime.now()),
-                          'Alex Thompson',
-                          '\$1,240.00',
-                          'Paid',
-                          Colors.green,
-                        ),
-                        _buildTxRow(
-                          '#TRX-8292',
-                          DateFormat('MMM dd, yyyy').format(DateTime.now()),
-                          'Sarah Jenkins',
-                          '\$450.00',
-                          'Pending',
-                          Colors.amber,
-                        ),
-                        _buildTxRow(
-                          '#TRX-8293',
-                          DateFormat('MMM dd, yyyy').format(
-                            DateTime.now().subtract(const Duration(days: 1)),
+                    child: _recentTransactions.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No transactions found',
+                              style: GoogleFonts.manrope(color: Colors.grey),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _recentTransactions.length,
+                            itemBuilder: (context, index) {
+                              final tx = _recentTransactions[index];
+                              return _buildTxRow(
+                                tx['id'],
+                                tx['date'],
+                                tx['customer'],
+                                tx['amount'],
+                                tx['status'],
+                                tx['color'],
+                              );
+                            },
                           ),
-                          'Michael Chen',
-                          '\$2,100.00',
-                          'Paid',
-                          Colors.green,
-                        ),
-                        _buildTxRow(
-                          '#TRX-8294',
-                          DateFormat('MMM dd, yyyy').format(
-                            DateTime.now().subtract(const Duration(days: 1)),
-                          ),
-                          'David Miller',
-                          '\$85.00',
-                          'Paid',
-                          Colors.green,
-                        ),
-                        _buildTxRow(
-                          '#TRX-8295',
-                          DateFormat('MMM dd, yyyy').format(
-                            DateTime.now().subtract(const Duration(days: 2)),
-                          ),
-                          'Emma Watson',
-                          '\$670.00',
-                          'Pending',
-                          Colors.amber,
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ),
@@ -466,7 +579,9 @@ class RevenueView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
+                  color: isPositive
+                      ? const Color(0xFFECFDF5)
+                      : const Color(0xFFFEF2F2),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
@@ -474,7 +589,7 @@ class RevenueView extends StatelessWidget {
                   style: GoogleFonts.manrope(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF10B981),
+                    color: isPositive ? const Color(0xFF10B981) : Colors.red,
                   ),
                 ),
               ),
@@ -520,7 +635,7 @@ class RevenueView extends StatelessWidget {
           Expanded(
             flex: 3,
             child: Text(
-              id,
+              '#$id',
               style: GoogleFonts.manrope(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -596,13 +711,6 @@ class RevenueView extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-          const Expanded(
-            flex: 1,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Icon(Icons.more_horiz, color: Color(0xFF94A3B8)),
             ),
           ),
         ],

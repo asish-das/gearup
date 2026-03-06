@@ -20,6 +20,7 @@ class User {
   final String? status;
   final String? createdAt;
   final String? address;
+  final String? description;
 
   User({
     required this.uid,
@@ -32,6 +33,7 @@ class User {
     this.status,
     this.createdAt,
     this.address,
+    this.description,
   });
 
   factory User.fromMap(Map<String, dynamic> map) {
@@ -52,6 +54,7 @@ class User {
       status: map['status'],
       createdAt: map['createdAt'],
       address: map['address'],
+      description: map['description'],
     );
   }
 
@@ -67,6 +70,7 @@ class User {
       'status': status,
       'createdAt': createdAt,
       'address': address,
+      'description': description,
     };
   }
 }

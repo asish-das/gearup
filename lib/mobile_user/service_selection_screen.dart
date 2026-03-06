@@ -16,26 +16,6 @@ class ServiceSelectionScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundDark,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        title: Text(
-          serviceCenterName,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.white,
-            size: 20,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
       body: serviceCenterId == null
           ? const Center(
               child: Text(
@@ -43,69 +23,286 @@ class ServiceSelectionScreen extends StatelessWidget {
                 style: TextStyle(color: Colors.red),
               ),
             )
-          : StreamBuilder<QuerySnapshot>(
+          : StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('users')
                   .doc(serviceCenterId)
-                  .collection('services')
-                  .where('isActive', isEqualTo: true)
                   .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
+              builder: (context, centerSnapshot) {
+                if (centerSnapshot.hasError) {
                   return const Center(
                     child: Text(
-                      'Error loading services',
+                      'Error loading center info',
                       style: TextStyle(color: Colors.red),
                     ),
                   );
                 }
 
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (centerSnapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: CircularProgressIndicator(color: AppTheme.primary),
                   );
                 }
 
-                final services = snapshot.data?.docs ?? [];
+                final centerData =
+                    centerSnapshot.data?.data() as Map<String, dynamic>? ?? {};
+                final description =
+                    centerData['description'] ??
+                    'Professional vehicle maintenance and repair services.';
+                final hours =
+                    centerData['operatingHours'] as Map<String, dynamic>? ?? {};
 
-                if (services.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No services available at this center.',
-                      style: TextStyle(color: Colors.white54),
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: services.length,
-                  itemBuilder: (context, index) {
-                    final data = services[index].data() as Map<String, dynamic>;
-                    // In my_services_view.dart, we stored the price as string (e.g. '$0.00'), so we check if it already starts with $.
-                    String priceStr = data['price'] ?? '0';
-                    if (!priceStr.startsWith('\$')) {
-                      priceStr = '\$$priceStr';
-                    }
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildServiceTile(
-                        context,
-                        data['title'] ?? data['name'] ?? 'Unknown Service',
-                        data['desc'] ??
-                            data['description'] ??
-                            'No description available',
-                        priceStr,
-                        Icons.build, // Default icon
-                        serviceCenterId,
-                        serviceCenterName,
+                return CustomScrollView(
+                  slivers: [
+                    SliverAppBar(
+                      expandedHeight: 200.0,
+                      floating: false,
+                      pinned: true,
+                      elevation: 0,
+                      backgroundColor: AppTheme.backgroundDark,
+                      flexibleSpace: FlexibleSpaceBar(
+                        title: Text(
+                          serviceCenterName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.5,
+                            color: Colors.white,
+                          ),
+                        ),
+                        background: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            if (centerData['profileImageUrl'] != null)
+                              Image.network(
+                                centerData['profileImageUrl'],
+                                fit: BoxFit.cover,
+                              )
+                            else
+                              Container(
+                                color: AppTheme.primary.withOpacity(0.1),
+                              ),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    AppTheme.backgroundDark.withOpacity(0.8),
+                                    AppTheme.backgroundDark,
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    );
-                  },
+                      leading: IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'About',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              description,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            _buildOperatingHours(hours),
+                            const SizedBox(height: 32),
+                            const Text(
+                              'Available Services',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      ),
+                    ),
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(serviceCenterId)
+                          .collection('services')
+                          .where('isActive', isEqualTo: true)
+                          .snapshots(),
+                      builder: (context, servicesSnapshot) {
+                        if (servicesSnapshot.hasError) {
+                          return const SliverFillRemaining(
+                            child: Center(
+                              child: Text(
+                                'Error loading services',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (servicesSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const SliverToBoxAdapter(
+                            child: Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(32.0),
+                                child: CircularProgressIndicator(
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+
+                        final services = servicesSnapshot.data?.docs ?? [];
+
+                        if (services.isEmpty) {
+                          return const SliverFillRemaining(
+                            child: Center(
+                              child: Text(
+                                'No services available at this center.',
+                                style: TextStyle(color: Colors.white54),
+                              ),
+                            ),
+                          );
+                        }
+
+                        return SliverList(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final data =
+                                services[index].data() as Map<String, dynamic>;
+                            String priceStr = data['price'] ?? '0';
+                            if (!priceStr.startsWith('\$')) {
+                              priceStr = '\$$priceStr';
+                            }
+
+                            return Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: _buildServiceTile(
+                                context,
+                                data['title'] ??
+                                    data['name'] ??
+                                    'Unknown Service',
+                                data['desc'] ??
+                                    data['description'] ??
+                                    'No description available',
+                                priceStr,
+                                Icons.build,
+                                serviceCenterId,
+                                serviceCenterName,
+                              ),
+                            );
+                          }, childCount: services.length),
+                        );
+                      },
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 40)),
+                  ],
                 );
               },
             ),
+    );
+  }
+
+  Widget _buildOperatingHours(Map<String, dynamic> hours) {
+    if (hours.isEmpty) return const SizedBox();
+
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.access_time, color: AppTheme.primary, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Operating Hours',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...days.map((day) {
+            final dayData = hours[day] as Map<String, dynamic>?;
+            if (dayData == null) return const SizedBox();
+
+            final isOpen = dayData['isOpen'] ?? false;
+            final openTime = dayData['open'] ?? '--';
+            final closeTime = dayData['close'] ?? '--';
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    day,
+                    style: TextStyle(
+                      color: isOpen ? Colors.white : Colors.white38,
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    isOpen ? '$openTime - $closeTime' : 'Closed',
+                    style: TextStyle(
+                      color: isOpen ? AppTheme.primary : Colors.white24,
+                      fontSize: 13,
+                      fontWeight: isOpen ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ],
+      ),
     );
   }
 

@@ -24,8 +24,10 @@ class _BookingScreenState extends State<BookingScreen> {
   String? _serviceDesc;
   String? _priceStr;
 
+  List<Map<String, dynamic>> _allAvailableSlots = [];
   List<Map<String, dynamic>> _serviceCenterSlots = [];
   List<String> _bookedTimes = [];
+  Map<String, dynamic> _operatingHours = {};
   bool _isLoadingSlots = false;
 
   @override
@@ -58,6 +60,10 @@ class _BookingScreenState extends State<BookingScreen> {
           .get();
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
+
+        // Fetch operating hours
+        final hours = data['operatingHours'] as Map<String, dynamic>? ?? {};
+
         final slotConfig = data['slotConfig'] as Map<String, dynamic>? ?? {};
         final List<dynamic> slotsList =
             slotConfig['slots'] ??
@@ -72,9 +78,11 @@ class _BookingScreenState extends State<BookingScreen> {
 
         if (mounted) {
           setState(() {
-            _serviceCenterSlots = slotsList
+            _operatingHours = hours;
+            _allAvailableSlots = slotsList
                 .map((e) => Map<String, dynamic>.from(e as Map))
                 .toList();
+            _serviceCenterSlots = List.from(_allAvailableSlots);
           });
         }
       }
@@ -97,35 +105,35 @@ class _BookingScreenState extends State<BookingScreen> {
     });
 
     try {
+      // First check if the selected day is closed in operating hours
+      final dayName = DateFormat('EEEE').format(_selectedDate!);
+      final dayInfo = _operatingHours[dayName] as Map<String, dynamic>?;
+      final bool isClosed = dayInfo != null && !(dayInfo['isOpen'] ?? true);
+
+      if (isClosed) {
+        if (mounted) {
+          setState(() {
+            _bookedTimes = []; // No slots will be shown anyway
+            _serviceCenterSlots = []; // Force empty slots if closed
+          });
+        }
+        return;
+      }
+
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
 
       final query = await FirebaseFirestore.instance
           .collection('bookings')
           .where('serviceCenterId', isEqualTo: _serviceCenterId)
+          .where('dateString', isEqualTo: dateStr)
           .get();
 
       List<String> bookedTimes = [];
       for (var doc in query.docs) {
         final data = doc.data();
-        final bookingDateStr = data['dateString'] as String?;
-        final legacyDateIso = data['date'] as String?;
-
-        bool isMatchingDate = false;
-        if (bookingDateStr != null) {
-          isMatchingDate = (bookingDateStr == dateStr);
-        } else if (legacyDateIso != null) {
-          try {
-            final parsedDate = DateTime.parse(legacyDateIso);
-            final formattedLegacy = DateFormat('yyyy-MM-dd').format(parsedDate);
-            isMatchingDate = (formattedLegacy == dateStr);
-          } catch (_) {}
-        }
-
-        if (isMatchingDate) {
-          if (data['status'] != 'cancelled' && data['status'] != 'rejected') {
-            if (data['time'] != null) {
-              bookedTimes.add(data['time'] as String);
-            }
+        if (data['status'] != 'cancelled' && data['status'] != 'rejected') {
+          if (data['time'] != null) {
+            bookedTimes.add(data['time'] as String);
           }
         }
       }
@@ -133,10 +141,11 @@ class _BookingScreenState extends State<BookingScreen> {
       if (mounted) {
         setState(() {
           _bookedTimes = bookedTimes;
+          _serviceCenterSlots = List.from(_allAvailableSlots);
         });
       }
     } catch (e) {
-      debugPrint('Error fetching booked slots: \$e');
+      debugPrint('Error fetching booked slots: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -149,13 +158,19 @@ class _BookingScreenState extends State<BookingScreen> {
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now().add(const Duration(days: 1)),
+      initialDate: _selectedDate ?? _getInitialSelectableDate(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 90)),
+      selectableDayPredicate: (DateTime day) {
+        final dayName = DateFormat('EEEE').format(day);
+        final dayInfo = _operatingHours[dayName] as Map<String, dynamic>?;
+        if (dayInfo == null) return true;
+        return dayInfo['isOpen'] ?? true;
+      },
       builder: (context, child) {
         return Theme(
           data: ThemeData.dark().copyWith(
-            colorScheme: ColorScheme.dark(
+            colorScheme: const ColorScheme.dark(
               primary: AppTheme.primary,
               onPrimary: AppTheme.backgroundDark,
               surface: AppTheme.surface,
@@ -173,6 +188,20 @@ class _BookingScreenState extends State<BookingScreen> {
       });
       _fetchBookedSlotsForDate();
     }
+  }
+
+  DateTime _getInitialSelectableDate() {
+    DateTime date = DateTime.now().add(const Duration(days: 1));
+    // Find the next open day if tomorrow is closed
+    for (int i = 0; i < 7; i++) {
+      final checkDate = DateTime.now().add(Duration(days: i + 1));
+      final dayName = DateFormat('EEEE').format(checkDate);
+      final dayInfo = _operatingHours[dayName] as Map<String, dynamic>?;
+      if (dayInfo == null || (dayInfo['isOpen'] ?? true)) {
+        return checkDate;
+      }
+    }
+    return date;
   }
 
   @override
