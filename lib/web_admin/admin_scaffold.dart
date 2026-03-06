@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:gearup/services/navigation_service.dart';
-import 'package:gearup/services/auth_service.dart';
-
+import '../services/navigation_service.dart';
+import '../services/auth_service.dart';
 import 'dashboard_view.dart';
 import 'service_centers_view.dart';
-import 'vehicle_owners_view.dart';
 import 'bookings_manager_view.dart';
-import 'system_settings_view.dart';
+import 'vehicle_owners_view.dart';
 import 'admin_management_view.dart';
+import 'system_settings_view.dart';
+import 'payments_view.dart';
+import 'reports_view.dart';
 
 class AdminScaffold extends StatefulWidget {
   const AdminScaffold({super.key});
@@ -22,13 +23,19 @@ class _AdminScaffoldState extends State<AdminScaffold> {
   bool _isSidebarCollapsed = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  final List<Widget> _views = [
-    const DashboardView(),
+  List<Widget> get _views => [
+    DashboardView(
+      onNavigate: (index) {
+        setState(() {
+          _selectedIndex = index;
+        });
+      },
+    ),
     const ServiceCentersView(),
     const VehicleOwnersView(),
     const BookingsManagerView(),
-    const Center(child: Text('Payments placeholder')),
-    const Center(child: Text('Reports placeholder')),
+    const PaymentsView(),
+    const ReportsView(),
     const Center(child: Text('AI Configuration placeholder')),
     const AdminManagementView(),
     const SystemSettingsView(),

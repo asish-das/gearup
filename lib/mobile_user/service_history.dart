@@ -198,11 +198,16 @@ class _ServiceHistoryScreenState extends State<ServiceHistoryScreen> {
     required bool isPast,
   }) {
     Color statusColor = AppTheme.accent;
-    if (status.toUpperCase() == 'REJECTED' ||
+    final paymentStatus =
+        (data['paymentStatus'] as String?)?.toUpperCase() ?? '';
+    final isRefunded = paymentStatus == 'REFUNDED';
+
+    if (isRefunded) {
+      statusColor = Colors.red;
+    } else if (status.toUpperCase() == 'REJECTED' ||
         status.toUpperCase() == 'CANCELLED') {
       statusColor = Colors.red;
-    }
-    if (status.toUpperCase() == 'PENDING') {
+    } else if (status.toUpperCase() == 'PENDING') {
       statusColor = Colors.orange;
     }
 
@@ -248,7 +253,7 @@ class _ServiceHistoryScreenState extends State<ServiceHistoryScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    status.toUpperCase(),
+                    isRefunded ? 'REFUNDED' : status.toUpperCase(),
                     style: TextStyle(
                       color: statusColor,
                       fontSize: 10,
@@ -302,7 +307,9 @@ class _ServiceHistoryScreenState extends State<ServiceHistoryScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    isPast ? 'Total Paid' : 'Amount',
+                                    isRefunded
+                                        ? 'Amount Refunded'
+                                        : (isPast ? 'Total Paid' : 'Amount'),
                                     style: const TextStyle(
                                       color: Colors.white54,
                                       fontSize: 12,
@@ -310,10 +317,15 @@ class _ServiceHistoryScreenState extends State<ServiceHistoryScreen> {
                                   ),
                                   Text(
                                     price,
-                                    style: const TextStyle(
-                                      color: AppTheme.accent,
+                                    style: TextStyle(
+                                      color: isRefunded
+                                          ? Colors.white54
+                                          : AppTheme.accent,
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
+                                      decoration: isRefunded
+                                          ? TextDecoration.lineThrough
+                                          : null,
                                     ),
                                   ),
                                 ],
@@ -412,9 +424,11 @@ class _ServiceHistoryScreenState extends State<ServiceHistoryScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Total Paid',
-                      style: TextStyle(
+                    Text(
+                      data['paymentStatus'] == 'REFUNDED'
+                          ? 'Total Refunded'
+                          : 'Total Paid',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -422,10 +436,15 @@ class _ServiceHistoryScreenState extends State<ServiceHistoryScreen> {
                     ),
                     Text(
                       price,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.accent,
+                        color: data['paymentStatus'] == 'REFUNDED'
+                            ? Colors.red
+                            : AppTheme.accent,
+                        decoration: data['paymentStatus'] == 'REFUNDED'
+                            ? TextDecoration.lineThrough
+                            : null,
                       ),
                     ),
                   ],

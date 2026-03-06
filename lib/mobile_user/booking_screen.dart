@@ -23,6 +23,8 @@ class _BookingScreenState extends State<BookingScreen> {
   String? _serviceName;
   String? _serviceDesc;
   String? _priceStr;
+  String _deliveryType = 'PICKUP'; // Default
+  String _paymentMethod = 'CASH'; // Default
 
   List<Map<String, dynamic>> _allAvailableSlots = [];
   List<Map<String, dynamic>> _serviceCenterSlots = [];
@@ -155,6 +157,39 @@ class _BookingScreenState extends State<BookingScreen> {
     }
   }
 
+  bool _isTimeInPast(String timeStr) {
+    if (_selectedDate == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDay = DateTime(
+      _selectedDate!.year,
+      _selectedDate!.month,
+      _selectedDate!.day,
+    );
+
+    if (selectedDay.isAfter(today)) return false;
+    if (selectedDay.isBefore(today)) return true;
+
+    try {
+      // Handle both "09:00 AM" and "9:00 AM"
+      final format = DateFormat('h:mm a');
+      final parsedTime = format.parse(timeStr);
+      final slotTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        parsedTime.hour,
+        parsedTime.minute,
+      );
+
+      // Disable if slot time is strictly before current time
+      return slotTime.isBefore(now);
+    } catch (e) {
+      debugPrint('Error parsing time: $e');
+      return false;
+    }
+  }
+
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -191,17 +226,24 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   DateTime _getInitialSelectableDate() {
-    DateTime date = DateTime.now().add(const Duration(days: 1));
-    // Find the next open day if tomorrow is closed
-    for (int i = 0; i < 7; i++) {
-      final checkDate = DateTime.now().add(Duration(days: i + 1));
+    DateTime now = DateTime.now();
+    // Check if today is open
+    final todayName = DateFormat('EEEE').format(now);
+    final todayInfo = _operatingHours[todayName] as Map<String, dynamic>?;
+    if (todayInfo == null || (todayInfo['isOpen'] ?? true)) {
+      return now;
+    }
+
+    // Find the next open day
+    for (int i = 1; i <= 7; i++) {
+      final checkDate = now.add(Duration(days: i));
       final dayName = DateFormat('EEEE').format(checkDate);
       final dayInfo = _operatingHours[dayName] as Map<String, dynamic>?;
       if (dayInfo == null || (dayInfo['isOpen'] ?? true)) {
         return checkDate;
       }
     }
-    return date;
+    return now.add(const Duration(days: 1));
   }
 
   @override
@@ -353,8 +395,11 @@ class _BookingScreenState extends State<BookingScreen> {
                     : _serviceCenterSlots.map((slot) {
                         final String time = slot['time'];
                         final int configStatus = slot['status'] ?? 0;
+                        final bool isTimePast = _isTimeInPast(time);
                         final bool isUnavailable =
-                            configStatus != 0 || _bookedTimes.contains(time);
+                            configStatus != 0 ||
+                            _bookedTimes.contains(time) ||
+                            isTimePast;
                         final isSelected = _selectedTime == time;
 
                         return InkWell(
@@ -407,14 +452,18 @@ class _BookingScreenState extends State<BookingScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  isUnavailable ? 'Booked' : 'Available',
+                                  isUnavailable
+                                      ? (isTimePast ? 'Past' : 'Booked')
+                                      : 'Available',
                                   style: TextStyle(
                                     color: isSelected
                                         ? Colors.white70
                                         : isUnavailable
-                                        ? Colors.redAccent.withValues(
-                                            alpha: 0.5,
-                                          )
+                                        ? (isTimePast
+                                              ? Colors.white38
+                                              : Colors.redAccent.withValues(
+                                                  alpha: 0.5,
+                                                ))
                                         : Colors.green,
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -479,6 +528,62 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Delivery Type',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildChoiceChip(
+                    label: 'Self Pickup',
+                    icon: Icons.storefront,
+                    selected: _deliveryType == 'PICKUP',
+                    onSelected: (v) => setState(() => _deliveryType = 'PICKUP'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildChoiceChip(
+                    label: 'Delivery',
+                    icon: Icons.delivery_dining,
+                    selected: _deliveryType == 'DELIVERY',
+                    onSelected: (v) =>
+                        setState(() => _deliveryType = 'DELIVERY'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Payment Method',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildChoiceChip(
+                    label: 'Cash',
+                    icon: Icons.payments_outlined,
+                    selected: _paymentMethod == 'CASH',
+                    onSelected: (v) => setState(() => _paymentMethod = 'CASH'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildChoiceChip(
+                    label: 'Online',
+                    icon: Icons.account_balance_wallet_outlined,
+                    selected: _paymentMethod == 'ONLINE',
+                    onSelected: (v) =>
+                        setState(() => _paymentMethod = 'ONLINE'),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
@@ -571,6 +676,9 @@ class _BookingScreenState extends State<BookingScreen> {
                           'amount': total,
                           'totalAmount': total, // legacy
                           'status': 'PENDING',
+                          'paymentStatus': 'PENDING',
+                          'paymentMethod': _paymentMethod,
+                          'deliveryOption': _deliveryType.toLowerCase(),
                           'createdAt': FieldValue.serverTimestamp(),
                         };
 
@@ -641,6 +749,50 @@ class _BookingScreenState extends State<BookingScreen> {
         Text(label, style: const TextStyle(color: Colors.white54)),
         Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
       ],
+    );
+  }
+
+  Widget _buildChoiceChip({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required Function(bool) onSelected,
+  }) {
+    return InkWell(
+      onTap: () => onSelected(!selected),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppTheme.primary
+              : AppTheme.surface.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected
+                ? AppTheme.primary
+                : Colors.white.withValues(alpha: 0.05),
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: selected ? Colors.white : Colors.white54,
+              size: 24,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : Colors.white54,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gearup/services/auth_service.dart';
 import 'package:gearup/models/user.dart';
 import 'package:gearup/services/vehicle_service.dart';
 import 'package:gearup/models/vehicle.dart';
 import 'package:gearup/mobile_user/service_centers.dart';
 import 'package:gearup/mobile_user/service_history.dart';
+import 'package:gearup/mobile_user/notification_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -93,36 +95,67 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ],
         ),
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppTheme.surface.withValues(alpha: 0.5),
-            ),
-            child: Stack(
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.notifications_none,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                  onPressed: () {},
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('notifications')
+                .where('userId', isEqualTo: AuthService.currentUser?.uid)
+                .where('isRead', isEqualTo: false)
+                .snapshots(),
+            builder: (context, snapshot) {
+              final unreadCount = snapshot.data?.docs.length ?? 0;
+              return Container(
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.surface.withValues(alpha: 0.5),
                 ),
-                Positioned(
-                  right: 12,
-                  top: 12,
-                  child: Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.accent,
-                      shape: BoxShape.circle,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.notifications_none,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NotificationScreen(),
+                          ),
+                        );
+                      },
                     ),
-                  ),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: AppTheme.accent,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            unreadCount > 9 ? '9+' : '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ],
       ),

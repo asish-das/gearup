@@ -479,12 +479,18 @@ class _CustomersViewState extends State<CustomersView> {
                   if (customer.bookings.length > 5) ...[
                     const SizedBox(height: 16),
                     Center(
-                      child: Text(
-                        'View All History (${customer.bookings.length})',
-                        style: GoogleFonts.manrope(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF5D40D4),
+                      child: GestureDetector(
+                        onTap: () {
+                          _showAllBookingsDialog(customer);
+                        },
+                        child: Text(
+                          'View All History (${customer.bookings.length})',
+                          style: GoogleFonts.manrope(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF5D40D4),
+                            decoration: TextDecoration.underline,
+                          ),
                         ),
                       ),
                     ),
@@ -755,5 +761,150 @@ class _CustomersViewState extends State<CustomersView> {
         ],
       ),
     );
+  }
+
+  void _showAllBookingsDialog(CustomerData customer) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: MediaQuery.of(context).size.height * 0.7,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Complete Service History',
+                      style: GoogleFonts.manrope(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Customer: ${customer.name}',
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: customer.bookings.length,
+                    itemBuilder: (context, index) {
+                      final booking = customer.bookings[index];
+                      final data = booking.data() as Map<String, dynamic>;
+                      final date =
+                          (data['appointmentDate'] as Timestamp?)?.toDate() ??
+                          DateTime.now();
+                      final dateStr = DateFormat('MMM dd, yyyy').format(date);
+                      final serviceName =
+                          data['serviceName'] ?? 'Unknown Service';
+                      final status = data['status'] ?? 'Unknown';
+                      final vehicle = data['vehicle'] ?? 'Unknown Vehicle';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              serviceName,
+                              style: GoogleFonts.manrope(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Text(
+                                  dateStr,
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 12,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _getStatusColor(
+                                      status,
+                                    ).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    status,
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: _getStatusColor(status),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Vehicle: $vehicle',
+                              style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
+        return const Color(0xFF10B981);
+      case 'PENDING':
+        return const Color(0xFFF59E0B);
+      case 'CANCELLED':
+        return const Color(0xFFEF4444);
+      case 'IN_PROGRESS':
+        return const Color(0xFF3B82F6);
+      default:
+        return const Color(0xFF64748B);
+    }
   }
 }

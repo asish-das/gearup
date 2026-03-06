@@ -305,4 +305,166 @@ class ExportService {
       throw Exception('Failed to export Text: $e');
     }
   }
+
+  static Future<String> exportGenericToPDF({
+    required String title,
+    required List<String> headers,
+    required List<List<String>> data,
+    required String fileNamePrefix,
+  }) async {
+    try {
+      final pdf = pw.Document();
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          header: (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                title,
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 10),
+              pw.Text(
+                'Generated on: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now())}',
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+              pw.SizedBox(height: 20),
+            ],
+          ),
+          build: (pw.Context context) {
+            return [
+              pw.TableHelper.fromTextArray(
+                context: context,
+                data: <List<String>>[headers, ...data],
+                border: pw.TableBorder.all(),
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                headerDecoration: const pw.BoxDecoration(
+                  color: PdfColors.grey300,
+                ),
+                cellStyle: const pw.TextStyle(fontSize: 8),
+                cellPadding: const pw.EdgeInsets.all(5),
+              ),
+            ];
+          },
+        ),
+      );
+
+      final fileName =
+          '${fileNamePrefix}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+
+      if (kIsWeb) {
+        final bytes = await pdf.save();
+        final blob = html.Blob([bytes]);
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        return 'Downloaded: $fileName';
+      } else {
+        final directory = await getApplicationDocumentsDirectory();
+        final file = File('${directory.path}/$fileName');
+        await file.writeAsBytes(await pdf.save());
+        return file.path;
+      }
+    } catch (e) {
+      throw Exception('Failed to export PDF: $e');
+    }
+  }
+
+  static Future<String> exportGenericToCSV({
+    required String title,
+    required List<String> headers,
+    required List<List<String>> data,
+    required String fileNamePrefix,
+  }) async {
+    try {
+      final buffer = StringBuffer();
+      buffer.writeln(title.toUpperCase());
+      buffer.writeln(
+        'Generated on,${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now())}',
+      );
+      buffer.writeln('');
+      buffer.writeln(headers.join(','));
+      for (var row in data) {
+        buffer.writeln(
+          row.map((e) => '"${e.replaceAll('"', '""')}"').join(','),
+        );
+      }
+
+      final fileName =
+          '${fileNamePrefix}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+
+      if (kIsWeb) {
+        final bytes = buffer.toString().codeUnits;
+        final blob = html.Blob([bytes]);
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        return 'Downloaded: $fileName';
+      } else {
+        final directory = await getApplicationDocumentsDirectory();
+        final file = File('${directory.path}/$fileName');
+        await file.writeAsString(buffer.toString());
+        return file.path;
+      }
+    } catch (e) {
+      throw Exception('Failed to export CSV: $e');
+    }
+  }
+
+  static Future<String> exportGenericToText({
+    required String title,
+    required List<String> headers,
+    required List<List<String>> data,
+    required String fileNamePrefix,
+  }) async {
+    try {
+      final buffer = StringBuffer();
+      buffer.writeln(title.toUpperCase());
+      buffer.writeln('=' * title.length);
+      buffer.writeln(
+        'Generated on: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now())}',
+      );
+      buffer.writeln('');
+
+      for (int i = 0; i < data.length; i++) {
+        buffer.writeln('Record #${i + 1}');
+        buffer.writeln('-' * 20);
+        for (int j = 0; j < headers.length; j++) {
+          final value = j < data[i].length ? data[i][j] : '';
+          buffer.writeln('${headers[j]}: $value');
+        }
+        buffer.writeln('');
+      }
+
+      final fileName =
+          '${fileNamePrefix}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.txt';
+
+      if (kIsWeb) {
+        final bytes = buffer.toString().codeUnits;
+        final blob = html.Blob([bytes]);
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        return 'Downloaded: $fileName';
+      } else {
+        final directory = await getApplicationDocumentsDirectory();
+        final file = File('${directory.path}/$fileName');
+        await file.writeAsString(buffer.toString());
+        return file.path;
+      }
+    } catch (e) {
+      throw Exception('Failed to export Text: $e');
+    }
+  }
 }

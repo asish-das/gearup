@@ -3,8 +3,32 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class BookingsManagerView extends StatelessWidget {
+class BookingsManagerView extends StatefulWidget {
   const BookingsManagerView({super.key});
+
+  @override
+  State<BookingsManagerView> createState() => _BookingsManagerViewState();
+}
+
+class _BookingsManagerViewState extends State<BookingsManagerView> {
+  String _selectedTab = 'All Bookings';
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  final List<String> _tabs = [
+    'All Bookings',
+    'Scheduled',
+    'In Progress',
+    'Completed',
+    'Cancelled',
+    'Refunded',
+  ];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,17 +83,12 @@ class BookingsManagerView extends StatelessWidget {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: [
-                    _buildTab('All Bookings', true),
-                    const SizedBox(width: 32),
-                    _buildTab('Scheduled', false),
-                    const SizedBox(width: 32),
-                    _buildTab('In Progress', false),
-                    const SizedBox(width: 32),
-                    _buildTab('Completed', false),
-                    const SizedBox(width: 32),
-                    _buildTab('Cancelled', false),
-                  ],
+                  children: _tabs.map((tab) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 32),
+                      child: _buildTab(tab, _selectedTab == tab),
+                    );
+                  }).toList(),
                 ),
               ),
               const SizedBox(height: 24),
@@ -106,6 +125,7 @@ class BookingsManagerView extends StatelessWidget {
                                   child: StreamBuilder<QuerySnapshot>(
                                     stream: FirebaseFirestore.instance
                                         .collection('bookings')
+                                        .orderBy('createdAt', descending: true)
                                         .snapshots(),
                                     builder: (context, snapshot) {
                                       if (snapshot.connectionState ==
@@ -115,8 +135,13 @@ class BookingsManagerView extends StatelessWidget {
                                         );
                                       }
                                       if (snapshot.hasError) {
-                                        return const Center(
-                                          child: Text('Error loading bookings'),
+                                        return Center(
+                                          child: Text(
+                                            'Error: ${snapshot.error}',
+                                            style: const TextStyle(
+                                              color: Colors.red,
+                                            ),
+                                          ),
                                         );
                                       }
                                       if (!snapshot.hasData ||
@@ -126,69 +151,87 @@ class BookingsManagerView extends StatelessWidget {
                                         );
                                       }
 
-                                      final docs = snapshot.data!.docs.toList();
-                                      docs.sort((a, b) {
-                                        final da =
-                                            a.data() as Map<String, dynamic>;
-                                        final db =
-                                            b.data() as Map<String, dynamic>;
+                                      var docs = snapshot.data!.docs;
 
-                                        DateTime? dateA;
-                                        if (da['appointmentDate'] != null) {
-                                          if (da['appointmentDate']
-                                              is Timestamp) {
-                                            dateA =
-                                                (da['appointmentDate']
-                                                        as Timestamp)
-                                                    .toDate();
-                                          } else {
-                                            dateA = DateTime.tryParse(
-                                              da['appointmentDate'].toString(),
+                                      // Client-side filtering
+                                      var filteredDocs = docs.where((doc) {
+                                        final data =
+                                            doc.data() as Map<String, dynamic>;
+                                        final status =
+                                            (data['status'] ?? 'PENDING')
+                                                .toString()
+                                                .toUpperCase();
+                                        final customer =
+                                            (data['name'] ??
+                                                    data['customerName'] ??
+                                                    '')
+                                                .toString()
+                                                .toLowerCase();
+                                        final center =
+                                            (data['serviceCenterName'] ?? '')
+                                                .toString()
+                                                .toLowerCase();
+                                        final bookingId = doc.id.toLowerCase();
+
+                                        // Search filter
+                                        bool matchesSearch =
+                                            _searchQuery.isEmpty ||
+                                            customer.contains(
+                                              _searchQuery.toLowerCase(),
+                                            ) ||
+                                            center.contains(
+                                              _searchQuery.toLowerCase(),
+                                            ) ||
+                                            bookingId.contains(
+                                              _searchQuery.toLowerCase(),
                                             );
-                                          }
-                                        } else if (da['createdAt'] != null &&
-                                            da['createdAt'] is Timestamp) {
-                                          dateA = (da['createdAt'] as Timestamp)
-                                              .toDate();
-                                        } else if (da['date'] != null) {
-                                          dateA = DateTime.tryParse(
-                                            da['date'].toString(),
-                                          );
+
+                                        if (!matchesSearch) return false;
+
+                                        // Tab filter
+                                        if (_selectedTab == 'All Bookings') {
+                                          return true;
+                                        }
+                                        if (_selectedTab == 'Scheduled') {
+                                          return status == 'PENDING' ||
+                                              status == 'ACCEPTED';
+                                        }
+                                        if (_selectedTab == 'In Progress') {
+                                          return status == 'IN SERVICE' ||
+                                              status == 'STARTED' ||
+                                              status == 'ON THE WAY';
+                                        }
+                                        if (_selectedTab == 'Completed') {
+                                          return status == 'COMPLETED';
+                                        }
+                                        if (_selectedTab == 'Cancelled') {
+                                          return status == 'CANCELLED' ||
+                                              status == 'REJECTED';
+                                        }
+                                        if (_selectedTab == 'Refunded') {
+                                          final pStatus =
+                                              (data['paymentStatus'] ?? '')
+                                                  .toString()
+                                                  .toUpperCase();
+                                          return status == 'REFUNDED' ||
+                                              pStatus == 'REFUNDED';
                                         }
 
-                                        DateTime? dateB;
-                                        if (db['appointmentDate'] != null) {
-                                          if (db['appointmentDate']
-                                              is Timestamp) {
-                                            dateB =
-                                                (db['appointmentDate']
-                                                        as Timestamp)
-                                                    .toDate();
-                                          } else {
-                                            dateB = DateTime.tryParse(
-                                              db['appointmentDate'].toString(),
-                                            );
-                                          }
-                                        } else if (db['createdAt'] != null &&
-                                            db['createdAt'] is Timestamp) {
-                                          dateB = (db['createdAt'] as Timestamp)
-                                              .toDate();
-                                        } else if (db['date'] != null) {
-                                          dateB = DateTime.tryParse(
-                                            db['date'].toString(),
-                                          );
-                                        }
+                                        return true;
+                                      }).toList();
 
-                                        return (dateB ?? DateTime.now())
-                                            .compareTo(dateA ?? DateTime.now());
-                                      });
-
-                                      final bookings = docs;
+                                      if (filteredDocs.isEmpty) {
+                                        return const Center(
+                                          child: Text(
+                                            'No bookings match your filters',
+                                          ),
+                                        );
+                                      }
 
                                       return ListView.builder(
-                                        itemCount: bookings.length,
+                                        itemCount: filteredDocs.length,
                                         itemBuilder: (context, index) {
-                                          final doc = bookings[index];
+                                          final doc = filteredDocs[index];
                                           final data =
                                               doc.data()
                                                   as Map<String, dynamic>;
@@ -232,25 +275,12 @@ class BookingsManagerView extends StatelessWidget {
                                                 'MMM dd, hh:mm a',
                                               ).format(dt);
                                             }
-                                          } else if (data['date'] != null) {
-                                            DateTime? dt = DateTime.tryParse(
-                                              data['date'],
-                                            );
-                                            if (dt != null) {
-                                              dateStr = DateFormat(
-                                                'MMM dd, yyyy',
-                                              ).format(dt);
-                                              if (data['time'] != null) {
-                                                dateStr += ', ${data['time']}';
-                                              }
-                                            }
                                           }
 
-                                          String payment =
-                                              status.toUpperCase() ==
-                                                  'COMPLETED'
-                                              ? 'Paid'
-                                              : 'Pending';
+                                          String pStatusStr =
+                                              (data['paymentStatus'] ??
+                                                      'PENDING')
+                                                  .toString();
                                           String amountStr = '0.00';
                                           if (data['amount'] != null) {
                                             amountStr = data['amount']
@@ -264,8 +294,7 @@ class BookingsManagerView extends StatelessWidget {
                                             amountStr = '\$$amountStr';
                                           }
 
-                                          MaterialColor statusColor =
-                                              Colors.grey;
+                                          Color statusColor = Colors.grey;
                                           if (status.toUpperCase() ==
                                               'PENDING') {
                                             statusColor = Colors.amber;
@@ -273,14 +302,23 @@ class BookingsManagerView extends StatelessWidget {
                                               'ACCEPTED') {
                                             statusColor = Colors.blue;
                                           } else if (status.toUpperCase() ==
-                                              'IN SERVICE') {
+                                                  'IN SERVICE' ||
+                                              status.toUpperCase() ==
+                                                  'STARTED') {
                                             statusColor = Colors.orange;
                                           } else if (status.toUpperCase() ==
                                               'COMPLETED') {
                                             statusColor = Colors.green;
                                           } else if (status.toUpperCase() ==
-                                              'CANCELLED') {
+                                                  'CANCELLED' ||
+                                              status.toUpperCase() ==
+                                                  'REJECTED') {
                                             statusColor = Colors.red;
+                                          } else if (status.toUpperCase() ==
+                                                  'REFUNDED' ||
+                                              pStatusStr.toUpperCase() ==
+                                                  'REFUNDED') {
+                                            statusColor = Colors.deepPurple;
                                           }
 
                                           return _buildTableRow(
@@ -290,7 +328,7 @@ class BookingsManagerView extends StatelessWidget {
                                             type,
                                             status,
                                             dateStr,
-                                            payment,
+                                            pStatusStr,
                                             amountStr,
                                             statusColor,
                                           );
@@ -316,111 +354,78 @@ class BookingsManagerView extends StatelessWidget {
   }
 
   Widget _buildTopActions({required bool isMobile}) {
-    final actions = [
-      Container(
-        height: 48,
-        width: isMobile ? double.infinity : 250,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 16),
-            const Icon(Icons.search, color: Color(0xFF94A3B8)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search bookings...',
-                  hintStyle: GoogleFonts.manrope(
-                    color: const Color(0xFF94A3B8),
-                    fontSize: 14,
-                  ),
-                  border: InputBorder.none,
-                ),
-              ),
+    return Row(
+      mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        Expanded(
+          child: Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
-          ],
-        ),
-      ),
-      if (isMobile) const SizedBox(height: 12) else const SizedBox(width: 16),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
+            child: Row(
               children: [
-                const Icon(
-                  Icons.calendar_today,
-                  color: Color(0xFF0F172A),
-                  size: 18,
+                const SizedBox(width: 16),
+                const Icon(Icons.search, color: Color(0xFF94A3B8)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search bookings...',
+                      hintStyle: GoogleFonts.manrope(
+                        color: const Color(0xFF94A3B8),
+                        fontSize: 14,
+                      ),
+                      border: InputBorder.none,
+                    ),
+                  ),
                 ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF5D40D4),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF5D40D4).withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.file_download, color: Colors.white, size: 20),
+              if (!isMobile) ...[
                 const SizedBox(width: 8),
                 Text(
-                  '${DateFormat('MMM dd').format(DateTime(DateTime.now().year, DateTime.now().month, 1))} - ${DateFormat('MMM dd').format(DateTime(DateTime.now().year, DateTime.now().month + 1, 0))}',
+                  'Export',
                   style: GoogleFonts.manrope(
-                    color: const Color(0xFF0F172A),
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
                 ),
               ],
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.expand_more, color: Color(0xFF64748B), size: 18),
-          ],
+            ],
+          ),
         ),
-      ),
-      if (isMobile) const SizedBox(height: 12) else const SizedBox(width: 16),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        width: isMobile ? double.infinity : null,
-        decoration: BoxDecoration(
-          color: const Color(0xFF5D40D4),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF5D40D4).withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.file_download, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Export',
-              style: GoogleFonts.manrope(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ];
-
-    if (isMobile) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: actions,
-      );
-    } else {
-      return Row(children: actions);
-    }
+      ],
+    );
   }
 
   Widget _buildTableHeader() {
@@ -441,10 +446,7 @@ class BookingsManagerView extends StatelessWidget {
           Expanded(flex: 3, child: Text('SERVICE TYPE', style: _headerStyle())),
           Expanded(flex: 2, child: Text('STATUS', style: _headerStyle())),
           Expanded(flex: 2, child: Text('DATE/TIME', style: _headerStyle())),
-          Expanded(
-            flex: 2,
-            child: Text('PAYMENT STATUS', style: _headerStyle()),
-          ),
+          Expanded(flex: 2, child: Text('PAYMENT', style: _headerStyle())),
           Expanded(flex: 2, child: Text('AMOUNT', style: _headerStyle())),
           const SizedBox(width: 32),
         ],
@@ -453,22 +455,29 @@ class BookingsManagerView extends StatelessWidget {
   }
 
   Widget _buildTab(String title, bool isActive) {
-    return Container(
-      padding: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: isActive ? const Color(0xFF5D40D4) : Colors.transparent,
-            width: 2,
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedTab = title;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: isActive ? const Color(0xFF5D40D4) : Colors.transparent,
+              width: 2,
+            ),
           ),
         ),
-      ),
-      child: Text(
-        title,
-        style: GoogleFonts.manrope(
-          color: isActive ? const Color(0xFF5D40D4) : const Color(0xFF64748B),
-          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-          fontSize: 14,
+        child: Text(
+          title,
+          style: GoogleFonts.manrope(
+            color: isActive ? const Color(0xFF5D40D4) : const Color(0xFF64748B),
+            fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+            fontSize: 14,
+          ),
         ),
       ),
     );
@@ -492,7 +501,7 @@ class BookingsManagerView extends StatelessWidget {
     String date,
     String payment,
     String amount,
-    MaterialColor statusColor,
+    Color statusColor,
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -522,12 +531,15 @@ class BookingsManagerView extends StatelessWidget {
                   child: Icon(Icons.person, color: Color(0xFF94A3B8), size: 16),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  customer,
-                  style: GoogleFonts.manrope(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F172A),
+                Expanded(
+                  child: Text(
+                    customer,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF0F172A),
+                    ),
                   ),
                 ),
               ],
@@ -537,6 +549,7 @@ class BookingsManagerView extends StatelessWidget {
             flex: 3,
             child: Text(
               center,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.manrope(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -548,6 +561,7 @@ class BookingsManagerView extends StatelessWidget {
             flex: 3,
             child: Text(
               type,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.manrope(
                 fontSize: 14,
                 color: const Color(0xFF64748B),
@@ -564,7 +578,7 @@ class BookingsManagerView extends StatelessWidget {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: statusColor.shade100,
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -572,7 +586,7 @@ class BookingsManagerView extends StatelessWidget {
                     style: GoogleFonts.manrope(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: statusColor.shade700,
+                      color: statusColor,
                     ),
                   ),
                 ),
@@ -597,9 +611,13 @@ class BookingsManagerView extends StatelessWidget {
                   width: 6,
                   height: 6,
                   decoration: BoxDecoration(
-                    color: payment == 'Paid'
+                    color:
+                        payment.toUpperCase() == 'PAID' ||
+                            payment.toUpperCase() == 'COMPLETED'
                         ? Colors.green
-                        : (payment == 'Refunded' ? Colors.red : Colors.grey),
+                        : (payment.toUpperCase() == 'REFUNDED'
+                              ? Colors.deepPurple
+                              : Colors.grey),
                     shape: BoxShape.circle,
                   ),
                 ),

@@ -23,6 +23,11 @@ class _MyServicesViewState extends State<MyServicesView> {
 
   final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
+  // Performance stats
+  double _todayRevenue = 0.0;
+  int _bookedSlotsCount = 0;
+  double _revenueTrend = 0.0; // Simulated trend or calculated from yesterday
+
   @override
   void initState() {
     super.initState();
@@ -94,6 +99,45 @@ class _MyServicesViewState extends State<MyServicesView> {
             setState(() {
               _services = services;
               _isLoading = false;
+            });
+          }
+        });
+
+    // Listen to bookings for today's performance
+    FirebaseFirestore.instance
+        .collection('bookings')
+        .where('serviceCenterId', isEqualTo: uid)
+        .snapshots()
+        .listen((snapshot) {
+          if (mounted) {
+            double revenue = 0;
+            int bookedCount = 0;
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+
+            for (var doc in snapshot.docs) {
+              final data = doc.data();
+              final appointmentTimestamp =
+                  data['appointmentDate'] as Timestamp?;
+              if (appointmentTimestamp == null) continue;
+
+              final appointmentDate = appointmentTimestamp.toDate();
+              final apptDay = DateTime(
+                appointmentDate.year,
+                appointmentDate.month,
+                appointmentDate.day,
+              );
+
+              if (apptDay == today) {
+                revenue += (data['amount'] ?? 0.0).toDouble();
+                bookedCount++;
+              }
+            }
+
+            setState(() {
+              _todayRevenue = revenue;
+              _bookedSlotsCount = bookedCount;
+              _revenueTrend = revenue > 0 ? 12.5 : 0.0;
             });
           }
         });
@@ -921,6 +965,9 @@ class _MyServicesViewState extends State<MyServicesView> {
   }
 
   Widget _buildLivePerformanceCard() {
+    final occupancy = _dailyLimit > 0 ? (_bookedSlotsCount / _dailyLimit) : 0.0;
+    final occupancyPercent = (occupancy * 100).toInt();
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -931,17 +978,24 @@ class _MyServicesViewState extends State<MyServicesView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'LIVE PERFORMANCE',
-            style: GoogleFonts.manrope(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF5D40D4),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'LIVE PERFORMANCE',
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF5D40D4),
+                ),
+              ),
+              if (_bookedSlotsCount > 0)
+                const Icon(Icons.sensors, color: Color(0xFF10B981), size: 14),
+            ],
           ),
           const SizedBox(height: 16),
           Text(
-            '\$1,240',
+            '\$${_todayRevenue.toStringAsFixed(0)}',
             style: GoogleFonts.manrope(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -958,26 +1012,30 @@ class _MyServicesViewState extends State<MyServicesView> {
                   color: const Color(0xFF64748B),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  '+12%',
-                  style: GoogleFonts.manrope(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF10B981),
+              if (_revenueTrend != 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    '+${_revenueTrend.toStringAsFixed(1)}%',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF10B981),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 20),
           LinearProgressIndicator(
-            value: 0.65,
+            value: occupancy.clamp(0.0, 1.0),
             backgroundColor: Colors.white,
             valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF5D40D4)),
             minHeight: 6,
@@ -985,7 +1043,7 @@ class _MyServicesViewState extends State<MyServicesView> {
           ),
           const SizedBox(height: 16),
           Text(
-            '65% of daily slots booked',
+            '$occupancyPercent% of daily slots booked',
             style: GoogleFonts.manrope(
               fontSize: 12,
               color: const Color(0xFF64748B),

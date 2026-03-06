@@ -300,7 +300,7 @@ class ServiceSelectionScreen extends StatelessWidget {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
