@@ -20,6 +20,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
   app_models.UserRole? _selectedRole;
 
   bool _isCreating = false;
+  bool _obscurePassword = true;
   List<app_models.User> _admins = [];
   bool _isLoadingAdmins = true;
 
@@ -772,7 +773,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
           height: 44,
           child: TextField(
             controller: controller,
-            obscureText: isPassword,
+            obscureText: isPassword && _obscurePassword,
             style: GoogleFonts.manrope(
               fontSize: 15,
               color: const Color(0xFF0F172A),
@@ -780,6 +781,14 @@ class _AdminManagementViewState extends State<AdminManagementView> {
             ),
             decoration: InputDecoration(
               hintText: placeholder,
+              suffixIcon: isPassword ? IconButton(
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  size: 20,
+                  color: const Color(0xFF64748B),
+                ),
+              ) : null,
               hintStyle: GoogleFonts.manrope(
                 fontSize: 14,
                 color: const Color(0xFF94A3B8),
