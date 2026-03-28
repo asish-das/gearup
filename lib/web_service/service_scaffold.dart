@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:gearup/services/navigation_service.dart';
 import 'package:gearup/services/auth_service.dart';
 
@@ -19,6 +21,43 @@ class ServiceScaffold extends StatefulWidget {
 
 class _ServiceScaffoldState extends State<ServiceScaffold> {
   int _selectedIndex = 0;
+  StreamSubscription? _statusSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupStatusListener();
+  }
+
+  void _setupStatusListener() {
+    final user = auth.FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _statusSubscription = AuthService.userStatusStream(user.uid).listen((status) {
+        if (status == 'suspended' || status == 'deleted' || status == 'rejected') {
+          _forceLogout();
+        }
+      });
+    }
+  }
+
+  Future<void> _forceLogout() async {
+    await AuthService.signOut();
+    if (mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your account has been suspended or removed.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _statusSubscription?.cancel();
+    super.dispose();
+  }
 
   final List<Widget> _views = [
     const DashboardView(),

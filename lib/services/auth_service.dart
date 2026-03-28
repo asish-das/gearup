@@ -162,4 +162,12 @@ class AuthService {
       throw e.toString();
     }
   }
+  // Get the current user's status in real-time
+  static Stream<String?> userStatusStream(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .map((doc) => doc.exists ? (doc.data() as Map<String, dynamic>)['status'] as String? : 'deleted');
+  }
 }

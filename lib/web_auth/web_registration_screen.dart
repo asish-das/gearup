@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:gearup/models/user.dart';
 import '../services/auth_service.dart';
-import 'package:gearup/web_admin/admin_scaffold.dart';
 
 class WebRegistrationScreen extends StatefulWidget {
   const WebRegistrationScreen({super.key});
@@ -74,41 +73,35 @@ class _WebRegistrationScreenState extends State<WebRegistrationScreen> {
       );
 
       if (!mounted) return;
-      if (_selectedRole == UserRole.admin) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const AdminScaffold()),
-          (route) => false,
-        );
-      } else {
-        // Since Service Centers are immediately created as pending, log them out and show a dialog
-        await auth.FirebaseAuth.instance.signOut();
-        if (!mounted) return;
+      // All enterprise roles (Admin, Service Center, etc.) start as pending and require approval.
+      // Log them out immediately after registration and show the pending message.
+      await auth.FirebaseAuth.instance.signOut();
+      if (!mounted) return;
 
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Registration Successful'),
-            content: const Text(
-              'Your service center account has been successfully created. '
-              'However, it is currently waiting for admin approval.\n\n'
-              'You will receive an update once your account is active.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                },
-                child: const Text('OK'),
-              ),
-            ],
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Registration Successful'),
+          content: Text(
+            'Your ${_selectedRole == UserRole.admin ? 'Admin' : 'Service Center'} account has been successfully created. '
+            'However, it is currently waiting for Super Admin approval.\n\n'
+            'You will receive an update once your account is activated.',
           ),
-        );
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
 
-        if (!mounted) return;
-        // Go back to the previous screen (the login screen)
-        Navigator.of(context).pop();
-      }
+      if (!mounted) return;
+      // Go back to the login screen
+      Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

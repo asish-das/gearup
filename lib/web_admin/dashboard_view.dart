@@ -98,24 +98,27 @@ class _DashboardViewState extends State<DashboardView> {
 
           for (var doc in snapshot.docs) {
             final data = doc.data();
-            final status = data['status'] ?? 'PENDING';
-            final timestamp = data['appointmentDate'] as Timestamp?;
+            final status = (data['status'] ?? 'PENDING').toString().toUpperCase();
+            final paymentStatus = (data['paymentStatus'] ?? 'PENDING').toString().toUpperCase();
+            final isPaidOrCompleted = status == 'COMPLETED' || paymentStatus == 'PAID';
+            final timestamp = data['createdAt'] as Timestamp?;
             final amount = (data['amount'] ?? 0.0).toDouble();
+            
             if (timestamp != null) {
               final date = timestamp.toDate();
-              final apptDay = DateTime(date.year, date.month, date.day);
+              final createDay = DateTime(date.year, date.month, date.day);
 
-              // Only count COMPLETED bookings for revenue
-              if (status == 'COMPLETED' &&
+              // Only count COMPLETED or PAID bookings for revenue
+              if (isPaidOrCompleted &&
                   date.isAfter(
                     startOfMonth.subtract(const Duration(seconds: 1)),
                   )) {
                 mRevenue += amount;
               }
 
-              final diffDays = today.difference(apptDay).inDays;
+              final diffDays = today.difference(createDay).inDays;
               if (diffDays >= 0 && diffDays < 7) {
-                if (status == 'COMPLETED') {
+                if (isPaidOrCompleted) {
                   rData[6 - diffDays] += amount;
                 }
                 bData[6 - diffDays] += 1;
@@ -778,118 +781,116 @@ class _DashboardViewState extends State<DashboardView> {
       );
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
-        dataRowMinHeight: 64,
-        dataRowMaxHeight: 72,
-        columns: [
-          DataColumn(
-            label: Text(
-              'Customer',
-              style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Service Type',
-              style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Center',
-              style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Date',
-              style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Amount',
-              style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Status',
-              style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-        rows: filtered.map((booking) {
-          final status = booking['status'] ?? 'PENDING';
-          Color statusColor;
-          switch (status) {
-            case 'COMPLETED':
-              statusColor = const Color(0xFF10B981);
-              break;
-            case 'IN SERVICE':
-              statusColor = const Color(0xFF3B82F6);
-              break;
-            case 'REFUNDED':
-              statusColor = const Color(0xFFF43F5E);
-              break;
-            default:
-              statusColor = const Color(0xFFF59E0B);
-          }
+    return DataTableTheme(
+      data: DataTableThemeData(
+        headingTextStyle: GoogleFonts.manrope(
+          fontWeight: FontWeight.bold,
+          color: const Color(0xFF475569),
+        ),
+        dataTextStyle: GoogleFonts.manrope(
+          color: const Color(0xFF0F172A),
+        ),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+              child: DataTable(
+                headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+                dataRowMinHeight: 64,
+                dataRowMaxHeight: 72,
+                columns: const [
+                  DataColumn(label: Text('Customer')),
+                  DataColumn(label: Text('Service Type')),
+                  DataColumn(label: Text('Center')),
+                  DataColumn(label: Text('Date')),
+                  DataColumn(label: Text('Amount')),
+                  DataColumn(label: Text('Status')),
+                ],
+                rows: filtered.map((booking) {
+                  final status = (booking['status'] ?? 'PENDING').toString().toUpperCase();
+                  Color statusColor;
+                  switch (status) {
+                    case 'COMPLETED':
+                      statusColor = const Color(0xFF10B981);
+                      break;
+                    case 'ACCEPTED':
+                    case 'IN SERVICE':
+                      statusColor = const Color(0xFF3B82F6);
+                      break;
+                    case 'CANCELLED':
+                    case 'REJECTED':
+                    case 'REFUNDED':
+                      statusColor = const Color(0xFFF43F5E);
+                      break;
+                    case 'DIAGNOSTICS':
+                      statusColor = Colors.purple;
+                      break;
+                    case 'TESTING':
+                      statusColor = Colors.teal;
+                      break;
+                    case 'PENDING':
+                    default:
+                      statusColor = const Color(0xFFF59E0B);
+                  }
 
-          final dateStr =
-              (booking['appointmentDate'] as Timestamp?)?.toDate() ??
-              DateTime.now();
+                  final dateStr =
+                      (booking['appointmentDate'] as Timestamp?)?.toDate() ??
+                      DateTime.now();
 
-          return DataRow(
-            cells: [
-              DataCell(
-                Text(
-                  booking['customerName'] ?? booking['userName'] ?? 'Unknown',
-                  style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
-                ),
+                  return DataRow(
+                    cells: [
+                      DataCell(
+                        Text(
+                          booking['customerName'] ?? booking['userName'] ?? 'Unknown',
+                          style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          booking['serviceName'] ??
+                              booking['serviceType'] ??
+                              'General Service',
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          booking['serviceCenterName'] ??
+                              booking['centerName'] ??
+                              'N/A',
+                        ),
+                      ),
+                      DataCell(Text(DateFormat('MMM dd, yyyy').format(dateStr))),
+                      DataCell(Text('\$${(booking['amount'] ?? 0).toDouble().toStringAsFixed(2)}')),
+                      DataCell(
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            status,
+                            style: GoogleFonts.manrope(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: statusColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
               ),
-              DataCell(
-                Text(
-                  booking['serviceName'] ??
-                      booking['serviceType'] ??
-                      'General Service',
-                ),
-              ),
-              DataCell(
-                Text(
-                  booking['serviceCenterName'] ??
-                      booking['centerName'] ??
-                      'N/A',
-                ),
-              ),
-              DataCell(Text(DateFormat('MMM dd, yyyy').format(dateStr))),
-              DataCell(Text('\$${booking['amount'] ?? 0}')),
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    status,
-                    style: GoogleFonts.manrope(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: statusColor,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           );
-        }).toList(),
+        },
       ),
     );
   }

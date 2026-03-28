@@ -73,12 +73,16 @@ class _ReportsViewState extends State<ReportsView> {
       stream: _firestore.collection('bookings').snapshots(),
       builder: (context, snapshot) {
         final bookings = snapshot.data?.docs ?? [];
-        final completed = bookings
-            .where((b) => b['status'] == 'COMPLETED')
-            .length;
-        final cancelled = bookings
-            .where((b) => b['status'] == 'CANCELLED')
-            .length;
+        final completed = bookings.where((b) {
+          final data = b.data() as Map<String, dynamic>;
+          return (data['status'] ?? '').toString().toUpperCase() == 'COMPLETED';
+        }).length;
+
+        final cancelled = bookings.where((b) {
+          final data = b.data() as Map<String, dynamic>;
+          final status = (data['status'] ?? '').toString().toUpperCase();
+          return status == 'CANCELLED' || status == 'REJECTED';
+        }).length;
 
         return GridView.count(
           shrinkWrap: true,
@@ -123,8 +127,14 @@ class _ReportsViewState extends State<ReportsView> {
     double total = 0;
     int count = 0;
     for (var doc in docs) {
-      final amount = (doc['amount'] ?? 0).toDouble();
-      if (doc['status'] == 'COMPLETED' || doc['paymentStatus'] == 'PAID') {
+      final data = doc.data() as Map<String, dynamic>;
+      final amount = (data['amount'] ?? 0).toDouble();
+      final status = (data['status'] ?? '').toString().toUpperCase();
+      final paymentStatus = (data['paymentStatus'] ?? '').toString().toUpperCase();
+
+      if (paymentStatus == 'REFUNDED' || status == 'REFUNDED') {
+        continue; // ignore refunds from revenue
+      } else if (status == 'COMPLETED' || paymentStatus == 'PAID') {
         total += amount;
         count++;
       }
@@ -361,7 +371,7 @@ class _ReportsViewState extends State<ReportsView> {
             'Joined Date',
             'Total Bookings',
           ];
-          final snapshot = await firestore.collection('service_centers').get();
+          final snapshot = await firestore.collection('users').where('role', isEqualTo: 'serviceCenter').get();
           data = await Future.wait(
             snapshot.docs.map((doc) async {
               final d = doc.data();
@@ -370,16 +380,25 @@ class _ReportsViewState extends State<ReportsView> {
                   .where('serviceCenterId', isEqualTo: doc.id)
                   .count()
                   .get();
+
+              String dateStr = 'N/A';
+              if (d['createdAt'] != null) {
+                if (d['createdAt'] is Timestamp) {
+                  dateStr = DateFormat('yyyy-MM-dd').format((d['createdAt'] as Timestamp).toDate());
+                } else if (d['createdAt'] is String) {
+                  final parsed = DateTime.tryParse(d['createdAt']);
+                  if (parsed != null) {
+                    dateStr = DateFormat('yyyy-MM-dd').format(parsed);
+                  }
+                }
+              }
+
               return <String>[
-                d['businessName'] ?? 'N/A',
+                d['businessName'] ?? d['name'] ?? 'N/A',
                 d['email'] ?? 'N/A',
-                d['phone'] ?? 'N/A',
+                d['phone'] ?? d['phoneNumber'] ?? 'N/A',
                 d['status'] ?? 'N/A',
-                d['createdAt'] != null
-                    ? DateFormat(
-                        'yyyy-MM-dd',
-                      ).format((d['createdAt'] as Timestamp).toDate())
-                    : 'N/A',
+                dateStr,
                 bookingsCount.count.toString(),
               ];
             }),
@@ -393,16 +412,25 @@ class _ReportsViewState extends State<ReportsView> {
           final snapshot = await firestore.collection('users').get();
           data = snapshot.docs.map((doc) {
             final d = doc.data();
+
+            String dateStr = 'N/A';
+            if (d['createdAt'] != null) {
+              if (d['createdAt'] is Timestamp) {
+                dateStr = DateFormat('yyyy-MM-dd').format((d['createdAt'] as Timestamp).toDate());
+              } else if (d['createdAt'] is String) {
+                final parsed = DateTime.tryParse(d['createdAt']);
+                if (parsed != null) {
+                  dateStr = DateFormat('yyyy-MM-dd').format(parsed);
+                }
+              }
+            }
+
             return <String>[
-              d['fullName'] ?? 'N/A',
+              d['fullName'] ?? d['name'] ?? 'N/A',
               d['email'] ?? 'N/A',
-              d['phone'] ?? 'N/A',
-              d['createdAt'] != null
-                  ? DateFormat(
-                      'yyyy-MM-dd',
-                    ).format((d['createdAt'] as Timestamp).toDate())
-                  : 'N/A',
-              d['isSuspended'] == true ? 'Suspended' : 'Active',
+              d['phone'] ?? d['phoneNumber'] ?? 'N/A',
+              dateStr,
+              d['isSuspended'] == true || d['status'] == 'suspended' ? 'Suspended' : 'Active',
             ];
           }).toList();
           break;

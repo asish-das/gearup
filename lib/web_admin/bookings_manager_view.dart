@@ -3,8 +3,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class BookingsManagerView extends StatelessWidget {
+class BookingsManagerView extends StatefulWidget {
   const BookingsManagerView({super.key});
+
+  @override
+  State<BookingsManagerView> createState() => _BookingsManagerViewState();
+}
+
+class _BookingsManagerViewState extends State<BookingsManagerView> {
+  String _selectedTab = 'All';
 
   @override
   Widget build(BuildContext context) {
@@ -60,15 +67,21 @@ class BookingsManagerView extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildTab('All Bookings', true),
-                    const SizedBox(width: 32),
-                    _buildTab('Scheduled', false),
-                    const SizedBox(width: 32),
-                    _buildTab('In Progress', false),
-                    const SizedBox(width: 32),
-                    _buildTab('Completed', false),
-                    const SizedBox(width: 32),
-                    _buildTab('Cancelled', false),
+                    _buildTab('All', _selectedTab == 'All'),
+                    const SizedBox(width: 12),
+                    _buildTab('Pending', _selectedTab == 'Pending'),
+                    const SizedBox(width: 12),
+                    _buildTab('Rejected', _selectedTab == 'Rejected'),
+                    const SizedBox(width: 12),
+                    _buildTab('Accepted', _selectedTab == 'Accepted'),
+                    const SizedBox(width: 12),
+                    _buildTab('Diagnostics', _selectedTab == 'Diagnostics'),
+                    const SizedBox(width: 12),
+                    _buildTab('In Service', _selectedTab == 'In Service'),
+                    const SizedBox(width: 12),
+                    _buildTab('Testing', _selectedTab == 'Testing'),
+                    const SizedBox(width: 12),
+                    _buildTab('Completed', _selectedTab == 'Completed'),
                   ],
                 ),
               ),
@@ -195,7 +208,29 @@ class BookingsManagerView extends StatelessWidget {
                                             .compareTo(dateA ?? DateTime.now());
                                       });
 
-                                      final bookings = docs;
+                                      List<QueryDocumentSnapshot> bookings = docs;
+                                      if (_selectedTab != 'All') {
+                                        bookings = docs.where((doc) {
+                                          final data = doc.data() as Map<String, dynamic>;
+                                          final status = (data['status'] ?? 'PENDING').toString().toUpperCase();
+                                          
+                                          if (_selectedTab == 'Pending' && status == 'PENDING') return true;
+                                          if (_selectedTab == 'Rejected' && status == 'REJECTED') return true;
+                                          if (_selectedTab == 'Accepted' && status == 'ACCEPTED') return true;
+                                          if (_selectedTab == 'Diagnostics' && status == 'DIAGNOSTICS') return true;
+                                          if (_selectedTab == 'In Service' && status == 'IN SERVICE') return true;
+                                          if (_selectedTab == 'Testing' && status == 'TESTING') return true;
+                                          if (_selectedTab == 'Completed' && status == 'COMPLETED') return true;
+                                          
+                                          return false;
+                                        }).toList();
+                                      }
+
+                                      if (bookings.isEmpty) {
+                                        return const Center(
+                                          child: Text('No bookings found in this category'),
+                                        );
+                                      }
 
                                       return ListView.builder(
                                         itemCount: bookings.length,
@@ -276,23 +311,21 @@ class BookingsManagerView extends StatelessWidget {
                                             amountStr = '\$$amountStr';
                                           }
 
-                                          MaterialColor statusColor =
-                                              Colors.grey;
-                                          if (status.toUpperCase() ==
-                                              'PENDING') {
+                                          MaterialColor statusColor = Colors.grey;
+                                          if (status == 'PENDING') {
                                             statusColor = Colors.amber;
-                                          } else if (status.toUpperCase() ==
-                                              'ACCEPTED') {
+                                          } else if (status == 'ACCEPTED') {
                                             statusColor = Colors.blue;
-                                          } else if (status.toUpperCase() ==
-                                              'IN SERVICE') {
+                                          } else if (status == 'IN SERVICE') {
                                             statusColor = Colors.orange;
-                                          } else if (status.toUpperCase() ==
-                                              'COMPLETED') {
+                                          } else if (status == 'COMPLETED') {
                                             statusColor = Colors.green;
-                                          } else if (status.toUpperCase() ==
-                                              'CANCELLED') {
+                                          } else if (status == 'CANCELLED' || status == 'REJECTED') {
                                             statusColor = Colors.red;
+                                          } else if (status == 'DIAGNOSTICS') {
+                                            statusColor = Colors.purple;
+                                          } else if (status == 'TESTING') {
+                                            statusColor = Colors.teal;
                                           }
 
                                           return _buildTableRow(
@@ -465,22 +498,29 @@ class BookingsManagerView extends StatelessWidget {
   }
 
   Widget _buildTab(String title, bool isActive) {
-    return Container(
-      padding: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: isActive ? const Color(0xFF5D40D4) : Colors.transparent,
-            width: 2,
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedTab = title;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF5D40D4) : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isActive ? const Color(0xFF5D40D4) : const Color(0xFFE2E8F0),
+            width: 1,
           ),
         ),
-      ),
-      child: Text(
-        title,
-        style: GoogleFonts.manrope(
-          color: isActive ? const Color(0xFF5D40D4) : const Color(0xFF64748B),
-          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-          fontSize: 14,
+        child: Text(
+          title,
+          style: GoogleFonts.manrope(
+            color: isActive ? Colors.white : const Color(0xFF64748B),
+            fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+            fontSize: 14,
+          ),
         ),
       ),
     );

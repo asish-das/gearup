@@ -51,11 +51,27 @@ class _WebLoginScreenState extends State<WebLoginScreen> {
         final userData = await AuthService.getUserData(result.user!.uid);
         if (!mounted) return;
 
-        if (userData.role == UserRole.admin) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const AdminScaffold()),
-            (route) => false,
-          );
+        if (userData.role == UserRole.admin || userData.role == UserRole.superAdmin) {
+          if (userData.status == 'pending' && userData.email != 'admin@gmail.com') {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => const WebApprovalPendingScreen(),
+              ),
+              (route) => false,
+            );
+          } else if (userData.status == 'suspended' && userData.email != 'admin@gmail.com') {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => const WebAccountSuspendedScreen(),
+              ),
+              (route) => false,
+            );
+          } else {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const AdminScaffold()),
+              (route) => false,
+            );
+          }
         } else if (userData.role == UserRole.serviceCenter) {
           if (userData.status == 'pending') {
             Navigator.of(context).pushAndRemoveUntil(

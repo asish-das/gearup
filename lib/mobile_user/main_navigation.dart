@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
+import 'package:gearup/services/auth_service.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:gearup/mobile_user/home_dashboard.dart';
 import 'package:gearup/mobile_user/service_centers.dart';
@@ -17,6 +20,44 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   late int _currentIndex;
+  StreamSubscription? _statusSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _setupStatusListener();
+  }
+
+  void _setupStatusListener() {
+    final user = auth.FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _statusSubscription = AuthService.userStatusStream(user.uid).listen((status) {
+        if (status == 'suspended' || status == 'deleted' || status == 'rejected') {
+          _forceLogout();
+        }
+      });
+    }
+  }
+
+  Future<void> _forceLogout() async {
+    await AuthService.signOut();
+    if (mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your account has been suspended or removed.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _statusSubscription?.cancel();
+    super.dispose();
+  }
 
   final List<Widget> _screens = [
     const HomeDashboard(),
@@ -25,12 +66,6 @@ class _MainNavigationState extends State<MainNavigation> {
     const ServiceHistoryScreen(),
     const ProfilePage(),
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    _currentIndex = widget.initialIndex;
-  }
 
   @override
   Widget build(BuildContext context) {

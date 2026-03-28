@@ -3,7 +3,8 @@ import 'package:flutter/foundation.dart';
 enum UserRole {
   vehicleOwner('Vehicle Owner'),
   serviceCenter('Service Center'),
-  admin('Admin');
+  admin('Admin'),
+  superAdmin('Super Admin');
 
   const UserRole(this.displayName);
   final String displayName;

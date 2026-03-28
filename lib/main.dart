@@ -119,6 +119,7 @@ class _GearUpAppState extends State<GearUpApp> {
           }
           return const ServiceScaffold();
         case UserRole.admin:
+        case UserRole.superAdmin:
           return const AdminScaffold();
         case UserRole.vehicleOwner:
           // Vehicle owners should use mobile app, not web
@@ -134,6 +135,7 @@ class _GearUpAppState extends State<GearUpApp> {
           return const MainNavigation();
         case UserRole.serviceCenter:
         case UserRole.admin:
+        case UserRole.superAdmin:
           // Admin and Service Center should use web, not mobile
           return const MobileAccessDeniedScreen();
       }

@@ -96,15 +96,25 @@ class _PaymentsViewState extends State<PaymentsView> {
             children: [
               SizedBox(
                 width: 300,
+                height: 48,
                 child: TextField(
                   controller: _searchController,
                   onChanged: (value) =>
                       setState(() => _searchQuery = value.toLowerCase()),
                   decoration: InputDecoration(
                     hintText: 'Search transactions...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
+                    hintStyle: GoogleFonts.manrope(
+                      color: const Color(0xFF94A3B8),
+                      fontSize: 14,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      size: 20,
+                      color: Color(0xFF94A3B8),
+                    ),
                     filled: true,
                     fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -112,6 +122,10 @@ class _PaymentsViewState extends State<PaymentsView> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF5D40D4)),
                     ),
                   ),
                 ),
@@ -158,7 +172,7 @@ class _PaymentsViewState extends State<PaymentsView> {
         ];
       }).toList();
 
-      await ExportService.exportGenericToCSV(
+      await ExportService.exportGenericToPDF(
         title: 'Transactions History',
         headers: [
           'ID',
@@ -205,15 +219,15 @@ class _PaymentsViewState extends State<PaymentsView> {
 
     for (var p in payments) {
       final amount = (p['amount'] ?? 0).toDouble();
-      final status = p['status'] ?? '';
-      final paymentStatus = p['paymentStatus'] ?? '';
+      final status = (p['status'] ?? '').toString().toUpperCase();
+      final paymentStatus = (p['paymentStatus'] ?? '').toString().toUpperCase();
 
-      if (paymentStatus == 'PAID' || status == 'COMPLETED') {
-        totalRevenue += amount;
-        paidCount++;
-      } else if (status == 'REFUNDED') {
+      if (paymentStatus == 'REFUNDED' || status == 'REFUNDED') {
         totalRefunds += amount;
         refundCount++;
+      } else if (paymentStatus == 'PAID' || status == 'COMPLETED') {
+        totalRevenue += amount;
+        paidCount++;
       }
     }
 
@@ -347,24 +361,31 @@ class _PaymentsViewState extends State<PaymentsView> {
                 color: const Color(0xFF0F172A),
               ),
             ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SingleChildScrollView(
-                child: DataTable(
-                  headingRowColor: WidgetStateProperty.all(
-                    const Color(0xFFF8FAFC),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        headingRowColor: WidgetStateProperty.all(
+                          const Color(0xFFF8FAFC),
+                        ),
+                        columns: const [
+                          DataColumn(label: Text('Transaction ID')),
+                          DataColumn(label: Text('Date')),
+                          DataColumn(label: Text('Customer')),
+                          DataColumn(label: Text('Service Center')),
+                          DataColumn(label: Text('Amount')),
+                          DataColumn(label: Text('Status')),
+                        ],
+                        rows: filtered.map((p) => _buildDataRow(p)).toList(),
+                      ),
+                    ),
                   ),
-                  columns: const [
-                    DataColumn(label: Text('Transaction ID')),
-                    DataColumn(label: Text('Date')),
-                    DataColumn(label: Text('Customer')),
-                    DataColumn(label: Text('Service Center')),
-                    DataColumn(label: Text('Amount')),
-                    DataColumn(label: Text('Status')),
-                  ],
-                  rows: filtered.map((p) => _buildDataRow(p)).toList(),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ),
@@ -377,9 +398,10 @@ class _PaymentsViewState extends State<PaymentsView> {
     final paymentStatus = (p['paymentStatus'] ?? 'PENDING')
         .toString()
         .toUpperCase();
+    final isRefunded = paymentStatus == 'REFUNDED' || status == 'REFUNDED';
 
     Color statusColor;
-    if (status == 'REFUNDED') {
+    if (isRefunded) {
       statusColor = const Color(0xFFF43F5E);
     } else if (paymentStatus == 'PAID' || status == 'COMPLETED') {
       statusColor = const Color(0xFF10B981);
@@ -404,7 +426,7 @@ class _PaymentsViewState extends State<PaymentsView> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              status == 'REFUNDED' ? 'REFUNDED' : paymentStatus,
+              isRefunded ? 'REFUNDED' : paymentStatus,
               style: GoogleFonts.manrope(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
