@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 
@@ -72,15 +73,7 @@ class ServiceSelectionScreen extends StatelessWidget {
                         background: Stack(
                           fit: StackFit.expand,
                           children: [
-                            if (centerData['profileImageUrl'] != null)
-                              Image.network(
-                                centerData['profileImageUrl'],
-                                fit: BoxFit.cover,
-                              )
-                            else
-                              Container(
-                                color: AppTheme.primary.withOpacity(0.1),
-                              ),
+                            _buildHeaderImage(centerData['profileImageUrl']),
                             Container(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
@@ -380,6 +373,39 @@ class ServiceSelectionScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderImage(String? source) {
+    if (source == null || source.isEmpty) {
+      return Container(
+        color: AppTheme.primary.withOpacity(0.1),
+      );
+    }
+
+    if (source.startsWith('data:image')) {
+      try {
+        final base64Str = source.split(',').last;
+        return Image.memory(
+          base64Decode(base64Str),
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Container(
+            color: AppTheme.primary.withOpacity(0.1),
+          ),
+        );
+      } catch (e) {
+        return Container(
+          color: AppTheme.primary.withOpacity(0.1),
+        );
+      }
+    }
+
+    return Image.network(
+      source,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => Container(
+        color: AppTheme.primary.withOpacity(0.1),
       ),
     );
   }

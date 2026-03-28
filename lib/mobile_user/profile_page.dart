@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -199,16 +200,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: CircleAvatar(
                     radius: 56,
                     backgroundColor: AppTheme.surface,
-                    backgroundImage:
-                        _currentUser!.profileImageUrl != null &&
-                            _currentUser!.profileImageUrl!.isNotEmpty
-                        ? CachedNetworkImageProvider(
-                            _currentUser!.profileImageUrl!,
-                          )
-                        : null,
-                    child:
-                        (_currentUser!.profileImageUrl == null ||
-                            _currentUser!.profileImageUrl!.isEmpty)
+                    backgroundImage: _getProfileImageProvider(_currentUser!.profileImageUrl),
+                    child: (_currentUser!.profileImageUrl == null || _currentUser!.profileImageUrl!.isEmpty)
                         ? const Icon(
                             Icons.person_outline,
                             color: AppTheme.primary,
@@ -1667,5 +1660,18 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
     );
+  }
+
+  ImageProvider? _getProfileImageProvider(String? source) {
+    if (source == null || source.isEmpty) return null;
+    if (source.startsWith('data:image')) {
+      try {
+        final base64Str = source.split(',').last;
+        return MemoryImage(base64Decode(base64Str));
+      } catch (e) {
+        return null;
+      }
+    }
+    return CachedNetworkImageProvider(source);
   }
 }

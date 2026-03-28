@@ -36,7 +36,7 @@ class AuthService {
         role: role,
         phoneNumber: phoneNumber,
         businessName: businessName,
-        status: role == UserRole.serviceCenter ? 'pending' : 'active',
+        status: 'pending',
         createdAt: DateTime.now().toIso8601String(),
       );
 

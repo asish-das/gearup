@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -213,12 +214,7 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
             // Image
             Stack(
               children: [
-                Image(
-                  image: CachedNetworkImageProvider(imageUrl),
-                  width: double.infinity,
-                  height: 180,
-                  fit: BoxFit.cover,
-                ),
+                _buildDynamicImage(imageUrl),
                 Positioned(
                   top: 12,
                   right: 12,
@@ -357,6 +353,40 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDynamicImage(String source) {
+    if (source.startsWith('data:image')) {
+      try {
+        final base64Str = source.split(',').last;
+        return Image.memory(
+          base64Decode(base64Str),
+          width: double.infinity,
+          height: 180,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
+        );
+      } catch (e) {
+        return _buildPlaceholderImage();
+      }
+    }
+    return CachedNetworkImage(
+      imageUrl: source,
+      width: double.infinity,
+      height: 180,
+      fit: BoxFit.cover,
+      placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+      errorWidget: (context, url, error) => _buildPlaceholderImage(),
+    );
+  }
+
+  Widget _buildPlaceholderImage() {
+    return Container(
+      width: double.infinity,
+      height: 180,
+      color: Colors.grey[900],
+      child: const Icon(Icons.image, color: Colors.white24, size: 48),
     );
   }
 }

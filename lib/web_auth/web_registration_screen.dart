@@ -463,19 +463,22 @@ class _WebRegistrationScreenState extends State<WebRegistrationScreen> {
                                               _fullNameController,
                                             ),
                                           ),
-                                          if (!isMobile)
-                                            const SizedBox(width: 24),
-                                          if (isMobile)
-                                            const SizedBox(height: 24),
-                                          Expanded(
-                                            flex: isMobile ? 0 : 1,
-                                            child: buildField(
-                                              'Business Name',
-                                              Icons.domain,
-                                              'Acme Corp',
-                                              _businessNameController,
+                                          if (_selectedRole ==
+                                              UserRole.serviceCenter) ...[
+                                            if (!isMobile)
+                                              const SizedBox(width: 24),
+                                            if (isMobile)
+                                              const SizedBox(height: 24),
+                                            Expanded(
+                                              flex: isMobile ? 0 : 1,
+                                              child: buildField(
+                                                'Business Name',
+                                                Icons.domain,
+                                                'Acme Corp',
+                                                _businessNameController,
+                                              ),
                                             ),
-                                          ),
+                                          ],
                                         ],
                                       ),
                                       const SizedBox(height: 24),

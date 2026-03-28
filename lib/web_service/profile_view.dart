@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 
 class ProfileView extends StatefulWidget {
@@ -161,6 +164,24 @@ class _ProfileViewState extends State<ProfileView> {
     }
   }
 
+  Future<void> _pickLogo() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 70,
+    );
+
+    if (image != null) {
+      final Uint8List bytes = await image.readAsBytes();
+      final String base64Image = 'data:image/png;base64,${base64Encode(bytes)}';
+      setState(() {
+        _imageUrlController.text = base64Image;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _garageNameController.dispose();
@@ -300,12 +321,20 @@ class _ProfileViewState extends State<ProfileView> {
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(12),
+                        image: _imageUrlController.text.isNotEmpty
+                            ? DecorationImage(
+                                image: _buildImageProvider(_imageUrlController.text),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                       ),
-                      child: Icon(
-                        Icons.image,
-                        color: const Color(0xFF94A3B8),
-                        size: isMobile ? 24 : 32,
-                      ),
+                      child: _imageUrlController.text.isEmpty
+                          ? Icon(
+                              Icons.image,
+                              color: const Color(0xFF94A3B8),
+                              size: isMobile ? 24 : 32,
+                            )
+                          : null,
                     ),
                     const SizedBox(width: 24),
                     Expanded(
@@ -326,9 +355,31 @@ class _ProfileViewState extends State<ProfileView> {
                               color: const Color(0xFF64748B),
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          const SizedBox(height: 8),
-                          _buildTextField('Logo URL', _imageUrlController),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: _pickLogo,
+                                icon: const Icon(Icons.upload, size: 16),
+                                label: const Text('Change Logo'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF5D40D4),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                              if (_imageUrlController.text.isNotEmpty) ...[
+                                const SizedBox(width: 12),
+                                TextButton(
+                                  onPressed: () => setState(() => _imageUrlController.clear()),
+                                  child: const Text('Remove', style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -708,6 +759,18 @@ class _ProfileViewState extends State<ProfileView> {
         ),
       ],
     );
+  }
+
+  ImageProvider _buildImageProvider(String source) {
+    if (source.startsWith('data:image')) {
+      try {
+        final base64Str = source.split(',').last;
+        return MemoryImage(base64Decode(base64Str));
+      } catch (e) {
+        return const NetworkImage('https://via.placeholder.com/150');
+      }
+    }
+    return NetworkImage(source.isNotEmpty ? source : 'https://via.placeholder.com/150');
   }
 
   TextStyle _headerStyle() {
