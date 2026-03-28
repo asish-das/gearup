@@ -694,7 +694,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
     return GoogleFonts.manrope(
       fontSize: 12,
       fontWeight: FontWeight.bold,
-      color: const Color(0xFF94A3B8),
+      color: const Color(0xFF475569), // Darker for high contrast
       letterSpacing: 1.1,
     );
   }
@@ -706,9 +706,9 @@ class _AdminManagementViewState extends State<AdminManagementView> {
         Text(
           'ROLE SELECTION',
           style: GoogleFonts.manrope(
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF94A3B8),
+            color: const Color(0xFF475569),
           ),
         ),
         const SizedBox(height: 8),
@@ -730,7 +730,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                 'Select Role',
                 style: GoogleFonts.manrope(
                   fontSize: 14,
-                  color: const Color(0xFF94A3B8),
+                  color: const Color(0xFF64748B),
                 ),
               ),
               icon: const Icon(Icons.expand_more, color: Color(0xFF64748B), size: 20),
@@ -762,9 +762,9 @@ class _AdminManagementViewState extends State<AdminManagementView> {
         Text(
           label,
           style: GoogleFonts.manrope(
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF94A3B8),
+            color: const Color(0xFF475569),
           ),
         ),
         const SizedBox(height: 8),
@@ -773,12 +773,16 @@ class _AdminManagementViewState extends State<AdminManagementView> {
           child: TextField(
             controller: controller,
             obscureText: isPassword,
-            style: GoogleFonts.manrope(fontSize: 14),
+            style: GoogleFonts.manrope(
+              fontSize: 15,
+              color: const Color(0xFF0F172A),
+              fontWeight: FontWeight.w500,
+            ),
             decoration: InputDecoration(
               hintText: placeholder,
               hintStyle: GoogleFonts.manrope(
                 fontSize: 14,
-                color: const Color(0xFF94A3B8).withOpacity(0.5),
+                color: const Color(0xFF94A3B8),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
               filled: true,
