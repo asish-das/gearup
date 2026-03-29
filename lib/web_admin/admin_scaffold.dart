@@ -47,7 +47,6 @@ class _AdminScaffoldState extends State<AdminScaffold> {
   Future<void> _forceLogout() async {
     await AuthService.signOut();
     if (mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Your account has been suspended or removed.'),
@@ -447,10 +446,6 @@ class _AdminScaffoldState extends State<AdminScaffold> {
           child: InkWell(
             onTap: () async {
               await AuthService.signOut();
-              if (!mounted) return;
-              Navigator.of(
-                context,
-              ).pushNamedAndRemoveUntil('/', (route) => false);
             },
             borderRadius: BorderRadius.circular(12),
             child: Container(

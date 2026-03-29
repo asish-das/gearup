@@ -267,9 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      // Navigation is handled by auth state changes in main.dart
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();

@@ -307,7 +307,7 @@ class _SupermarketScreenState extends State<SupermarketScreen> {
                   'status': 'pending',
                 });
 
-                if (mounted) {
+                if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -317,7 +317,7 @@ class _SupermarketScreenState extends State<SupermarketScreen> {
                   );
                 }
               } catch (e) {
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
                   );

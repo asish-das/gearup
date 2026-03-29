@@ -33,13 +33,28 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final user = AuthService.currentUser;
       if (user != null) {
+        // Load User Data first
         final userData = await AuthService.getUserData(user.uid);
-        final vehicles = await VehicleService.getUserVehicles(user.uid);
         setState(() {
           _currentUser = userData;
-          _vehicles = vehicles;
+        });
+
+        // Then try to load vehicles independently
+        try {
+          final vehicles = await VehicleService.getUserVehicles(user.uid);
+          setState(() {
+            _vehicles = vehicles;
+            _isLoadingVehicles = false;
+          });
+        } catch (vehicleError) {
+          debugPrint('Error loading vehicles: $vehicleError');
+          setState(() {
+            _isLoadingVehicles = false;
+          });
+        }
+
+        setState(() {
           _isLoading = false;
-          _isLoadingVehicles = false;
         });
       } else {
         setState(() {
@@ -328,8 +343,9 @@ class _ProfilePageState extends State<ProfilePage> {
             _buildListTile(Icons.payments, 'Subscription', 'GearUp Gold Plan'),
             const SizedBox(height: 40),
             OutlinedButton.icon(
-              onPressed: () =>
-                  Navigator.pushReplacementNamed(context, '/login'),
+              onPressed: () async {
+                await AuthService.signOut();
+              },
               icon: const Icon(Icons.logout, color: Colors.redAccent),
               label: const Text(
                 'Logout',
@@ -786,6 +802,11 @@ class _ProfilePageState extends State<ProfilePage> {
                       'License Plate',
                       vehicle.licensePlate,
                     ),
+                    _buildDetailRow(
+                      Icons.speed,
+                      'Mileage',
+                      '${vehicle.kilometers} KM',
+                    ),
                   ],
                 ),
               ),
@@ -1019,7 +1040,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 licensePlate: licensePlateController.text
                                     .trim(),
                                 userId: _currentUser!.uid,
-                                batteryLevel: 85.0,
+                                kilometers: 0,
                                 isConnected: true,
                               );
 
@@ -1316,7 +1337,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 licensePlate: licensePlateController.text
                                     .trim(),
                                 userId: vehicle.userId,
-                                batteryLevel: vehicle.batteryLevel,
+                                kilometers: vehicle.kilometers,
                                 isConnected: vehicle.isConnected,
                               );
 

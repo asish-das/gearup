@@ -83,24 +83,30 @@ class _VehicleOwnersViewState extends State<VehicleOwnersView> {
         );
 
     // Real-time vehicles listener
-    _vehiclesSubscription = _firestore
-        .collection('vehicles')
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .listen(
-          (QuerySnapshot snapshot) {
-            List<Vehicle> vehicles = snapshot.docs
-                .map(
-                  (doc) => Vehicle.fromMap(doc.data() as Map<String, dynamic>),
-                )
-                .toList();
+    _vehiclesSubscription = _firestore.collection('vehicles').snapshots().listen(
+      (QuerySnapshot snapshot) {
+        List<Vehicle> vehicles = snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          return Vehicle.fromMap(data);
+        }).toList();
 
-            if (mounted) {
-              setState(() {
-                _vehicles = vehicles;
-              });
-            }
-          },
+        // Sort in memory to catch items missing createdAt field
+        vehicles.sort((a, b) {
+          final aTime = a.createdAt != null ? DateTime.tryParse(a.createdAt!) : null;
+          final bTime = b.createdAt != null ? DateTime.tryParse(b.createdAt!) : null;
+          if (aTime == null && bTime == null) return 0;
+          if (aTime == null) return 1;
+          if (bTime == null) return -1;
+          return bTime.compareTo(aTime);
+        });
+
+        if (mounted) {
+          setState(() {
+            _vehicles = vehicles;
+          });
+        }
+      },
           onError: (error) {
             debugPrint('Error listening to vehicles: $error');
             if (mounted) {
@@ -1269,15 +1275,29 @@ class _VehicleOwnersViewState extends State<VehicleOwnersView> {
                                 ),
                               ),
                               const Spacer(),
-                              Text(
-                                'Battery: ${vehicle.batteryLevel.toInt()}%',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: vehicle.batteryLevel > 50
-                                      ? const Color(0xFF10B981)
-                                      : const Color(0xFFF59E0B),
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Mileage: ${vehicle.kilometers} KM',
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF5D40D4),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      size: 14,
+                                      color: Color(0xFF5D40D4),
+                                    ),
+                                    onPressed: () => _updateVehicleMileage(vehicle),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    tooltip: 'Update Mileage',
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -1676,6 +1696,79 @@ class _VehicleOwnersViewState extends State<VehicleOwnersView> {
           ),
         ],
       ),
+    );
+  }
+  void _updateVehicleMileage(Vehicle vehicle) {
+    final controller = TextEditingController(
+      text: vehicle.kilometers.toString(),
+    );
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: const Color(0xFF1E293B),
+            title: Text(
+              'Update Mileage',
+              style: GoogleFonts.manrope(color: Colors.white),
+            ),
+            content: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Current Kilometers',
+                labelStyle: TextStyle(color: Color(0xFF5D40D4)),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white24),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final newKms = int.tryParse(controller.text);
+                  if (newKms != null) {
+                    try {
+                      await FirebaseFirestore.instance
+                          .collection('vehicles')
+                          .doc(vehicle.id)
+                          .update({'id': vehicle.id, 'kilometers': newKms});
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Mileage updated!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5D40D4),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Update'),
+              ),
+            ],
+          ),
     );
   }
 }

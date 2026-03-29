@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
-import 'package:gearup/models/user.dart';
-import 'package:gearup/services/auth_service.dart';
-import 'package:gearup/web_admin/admin_scaffold.dart';
-import 'package:gearup/web_service/service_scaffold.dart';
 import 'package:gearup/web_auth/web_registration_screen.dart';
-import 'package:gearup/access_denied_screens.dart';
 
 class WebLoginScreen extends StatefulWidget {
   const WebLoginScreen({super.key});
@@ -48,55 +43,10 @@ class _WebLoginScreenState extends State<WebLoginScreen> {
           );
 
       if (result.user != null) {
-        final userData = await AuthService.getUserData(result.user!.uid);
-        if (!mounted) return;
-
-        if (userData.role == UserRole.admin || userData.role == UserRole.superAdmin) {
-          if (userData.status == 'pending' && userData.email != 'admin@gmail.com') {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => const WebApprovalPendingScreen(),
-              ),
-              (route) => false,
-            );
-          } else if (userData.status == 'suspended' && userData.email != 'admin@gmail.com') {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => const WebAccountSuspendedScreen(),
-              ),
-              (route) => false,
-            );
-          } else {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const AdminScaffold()),
-              (route) => false,
-            );
-          }
-        } else if (userData.role == UserRole.serviceCenter) {
-          if (userData.status == 'pending') {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => const WebApprovalPendingScreen(),
-              ),
-              (route) => false,
-            );
-          } else if (userData.status == 'suspended') {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => const WebAccountSuspendedScreen(),
-              ),
-              (route) => false,
-            );
-          } else {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const ServiceScaffold()),
-              (route) => false,
-            );
-          }
-        } else {
-          await auth.FirebaseAuth.instance.signOut();
-          throw Exception('Access denied. Enterprise privileges required.');
-        }
+        // We don't need to manually navigate here. 
+        // main.dart's authStateChanges listener will trigger and
+        // _getInitialRoute() will return the appropriate scaffold.
+        debugPrint('WebLoginScreen: Sign in successful for ${result.user?.email}');
       }
     } catch (e) {
       if (!mounted) return;

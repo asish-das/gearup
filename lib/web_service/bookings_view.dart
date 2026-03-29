@@ -13,6 +13,7 @@ class BookingData {
   final String userId;
   final String name;
   String status;
+  final String vehicleId;
   final String vehicle;
   final String service;
   final DateTime appointmentDate;
@@ -38,6 +39,7 @@ class BookingData {
     this.paymentStatus = 'PENDING',
     this.paymentMethod = 'N/A',
     this.deliveryOption,
+    this.vehicleId = '',
     required this.createdAt,
   });
 
@@ -47,6 +49,7 @@ class BookingData {
       userId: map['userId'] ?? '',
       name: map['name'] ?? map['customerName'] ?? 'Unknown',
       status: map['status'] ?? 'PENDING',
+      vehicleId: map['vehicleId'] ?? '',
       vehicle: map['vehicle'] ?? 'Unknown Vehicle',
       service: map['service'] ?? 'General Service',
       appointmentDate: map['appointmentDate'] != null
@@ -187,7 +190,7 @@ class _BookingsViewState extends State<BookingsView> {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: iconColor.withOpacity(0.1),
+                              color: iconColor.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(iconData, color: iconColor, size: 20),
@@ -272,13 +275,13 @@ class _BookingsViewState extends State<BookingsView> {
     }
 
     try {
-      await FirebaseFirestore.instance
-          .collection('bookings')
-          .doc(booking.id)
-          .update({'status': newStatus, 'progressVal': newProgress});
-
       if (newStatus == 'COMPLETED') {
-        _printReceipt(booking);
+        _showMileageUpdateDialog(booking);
+      } else {
+        await FirebaseFirestore.instance
+            .collection('bookings')
+            .doc(booking.id)
+            .update({'status': newStatus, 'progressVal': newProgress});
       }
     } catch (e) {
       if (mounted) {
@@ -290,6 +293,142 @@ class _BookingsViewState extends State<BookingsView> {
         );
       }
     }
+  }
+
+  void _showMileageUpdateDialog(BookingData booking) {
+    final mileageController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => Dialog(
+            backgroundColor: const Color(0xFF1E293B),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Container(
+              width: 400,
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Complete Service',
+                    style: GoogleFonts.manrope(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Enter the current mileage (KM) for ${booking.vehicle} to complete the service.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.manrope(fontSize: 14, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 32),
+                  TextField(
+                    controller: mileageController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Mileage (KM)',
+                      labelStyle: const TextStyle(color: Color(0xFF5D40D4)),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: const Icon(Icons.speed, color: Color(0xFF5D40D4)),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.manrope(color: Colors.white70),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final mileage = int.tryParse(mileageController.text);
+                            if (mileage == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please enter a valid mileage'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            try {
+                              // 1. Update booking
+                              await FirebaseFirestore.instance
+                                  .collection('bookings')
+                                  .doc(booking.id)
+                                  .update({'status': 'COMPLETED', 'progressVal': 1.0});
+
+                              // 2. Update vehicle kilometers if vehicleId exists
+                              if (booking.vehicleId.isNotEmpty) {
+                                await FirebaseFirestore.instance
+                                    .collection('vehicles')
+                                    .doc(booking.vehicleId)
+                                    .update({'kilometers': mileage});
+                              }
+
+                              if (!context.mounted) return;
+                              Navigator.pop(context);
+                              _printReceipt(booking);
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Service completed and mileage updated!',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5D40D4),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Text(
+                            'Complete',
+                            style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
   }
 
   Future<void> _markAsPaid(BookingData booking) async {
@@ -415,7 +554,7 @@ class _BookingsViewState extends State<BookingsView> {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'BookingDetails',
-      barrierColor: Colors.black.withOpacity(0.5),
+      barrierColor: Colors.black.withValues(alpha: 0.5),
       transitionDuration: const Duration(milliseconds: 300),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         return FadeTransition(
@@ -459,7 +598,7 @@ class _BookingsViewState extends State<BookingsView> {
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 30,
                         offset: const Offset(0, 15),
                       ),
@@ -495,7 +634,7 @@ class _BookingsViewState extends State<BookingsView> {
                           ),
                           Container(
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.05),
+                              color: Colors.white.withValues(alpha: 0.05),
                               shape: BoxShape.circle,
                             ),
                             child: IconButton(
@@ -514,10 +653,10 @@ class _BookingsViewState extends State<BookingsView> {
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.03),
+                          color: Colors.white.withValues(alpha: 0.03),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.05),
+                            color: Colors.white.withValues(alpha: 0.05),
                           ),
                         ),
                         child: Column(
@@ -663,7 +802,7 @@ class _BookingsViewState extends State<BookingsView> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: Colors.white70, size: 18),
@@ -723,9 +862,9 @@ class _BookingsViewState extends State<BookingsView> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.2)),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
           ),
           child: Center(
             child: Text(
@@ -876,6 +1015,7 @@ class _BookingsViewState extends State<BookingsView> {
                               if (time.hour < now.hour ||
                                   (time.hour == now.hour &&
                                       time.minute < now.minute)) {
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
@@ -938,7 +1078,9 @@ class _BookingsViewState extends State<BookingsView> {
                               'progress': 0.0,
                             });
 
+                        if (!context.mounted) return;
                         Navigator.pop(context);
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Quick booking added successfully!'),
@@ -993,7 +1135,7 @@ class _BookingsViewState extends State<BookingsView> {
           decoration: InputDecoration(
             prefixIcon: Icon(icon, color: const Color(0xFF5D40D4), size: 18),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
+            fillColor: Colors.white.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -1032,7 +1174,7 @@ class _BookingsViewState extends State<BookingsView> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -1239,7 +1381,7 @@ class _BookingsViewState extends State<BookingsView> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF5D40D4).withOpacity(0.3),
+                  color: const Color(0xFF5D40D4).withValues(alpha: 0.3),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -1277,7 +1419,7 @@ class _BookingsViewState extends State<BookingsView> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 20,
                 ),
               ],
@@ -1387,7 +1529,7 @@ class _BookingsViewState extends State<BookingsView> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1454,7 +1596,7 @@ class _BookingsViewState extends State<BookingsView> {
           boxShadow: isActive
               ? [
                   BoxShadow(
-                    color: const Color(0xFF5D40D4).withOpacity(0.2),
+                    color: const Color(0xFF5D40D4).withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -1538,15 +1680,15 @@ class _BookingsViewState extends State<BookingsView> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isHighlighted
-              ? const Color(0xFF5D40D4).withOpacity(0.3)
+              ? const Color(0xFF5D40D4).withValues(alpha: 0.3)
               : const Color(0xFFF1F5F9),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
             color: isHighlighted
-                ? const Color(0xFF5D40D4).withOpacity(0.08)
-                : Colors.black.withOpacity(0.03),
+                ? const Color(0xFF5D40D4).withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -1567,7 +1709,7 @@ class _BookingsViewState extends State<BookingsView> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
+                          color: statusColor.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -1639,7 +1781,7 @@ class _BookingsViewState extends State<BookingsView> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
+                          color: statusColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
@@ -1911,7 +2053,7 @@ class _BookingsViewState extends State<BookingsView> {
                       ? null
                       : [
                           BoxShadow(
-                            color: color.withOpacity(0.2),
+                            color: color.withValues(alpha: 0.2),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),

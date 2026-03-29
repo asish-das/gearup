@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Vehicle {
   final String id;
   final String make;
@@ -6,7 +8,8 @@ class Vehicle {
   final String color;
   final String licensePlate;
   final String imageUrl;
-  final double batteryLevel;
+  final int kilometers;
+  final int lastServiceKm;
   final bool isConnected;
   final String userId;
   final String? createdAt;
@@ -20,12 +23,27 @@ class Vehicle {
     required this.color,
     required this.licensePlate,
     this.imageUrl = '',
-    this.batteryLevel = 0.0,
+    this.kilometers = 0,
+    this.lastServiceKm = 0,
     this.isConnected = false,
     required this.userId,
     this.createdAt,
     this.updatedAt,
   });
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  static String? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is Timestamp) return value.toDate().toIso8601String();
+    return value.toString();
+  }
 
   factory Vehicle.fromMap(Map<String, dynamic> map) {
     return Vehicle(
@@ -36,11 +54,12 @@ class Vehicle {
       color: map['color'] ?? '',
       licensePlate: map['licensePlate'] ?? '',
       imageUrl: map['imageUrl'] ?? '',
-      batteryLevel: (map['batteryLevel'] ?? 0.0).toDouble(),
+      kilometers: _parseInt(map['kilometers']),
+      lastServiceKm: _parseInt(map['lastServiceKm']),
       isConnected: map['isConnected'] ?? false,
       userId: map['userId'] ?? '',
-      createdAt: map['createdAt'],
-      updatedAt: map['updatedAt'],
+      createdAt: _parseDate(map['createdAt']),
+      updatedAt: _parseDate(map['updatedAt']),
     );
   }
 
@@ -53,7 +72,8 @@ class Vehicle {
       'color': color,
       'licensePlate': licensePlate,
       'imageUrl': imageUrl,
-      'batteryLevel': batteryLevel,
+      'kilometers': kilometers,
+      'lastServiceKm': lastServiceKm,
       'isConnected': isConnected,
       'userId': userId,
       'createdAt': createdAt ?? DateTime.now().toIso8601String(),
@@ -62,5 +82,5 @@ class Vehicle {
   }
 
   String get displayName => '$year $make $model';
-  String get batteryDisplay => '${batteryLevel.toInt()}% Charge';
+  String get mileageDisplay => '$kilometers KM';
 }

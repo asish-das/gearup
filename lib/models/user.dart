@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum UserRole {
   vehicleOwner('Vehicle Owner'),
@@ -8,6 +9,17 @@ enum UserRole {
 
   const UserRole(this.displayName);
   final String displayName;
+
+  static UserRole fromString(String? value) {
+    if (value == null) return UserRole.vehicleOwner;
+    return UserRole.values.firstWhere(
+      (role) => role.name == value || role.displayName == value,
+      orElse: () {
+        debugPrint('Unknown role: $value');
+        return UserRole.vehicleOwner;
+      },
+    );
+  }
 }
 
 class User {
@@ -37,23 +49,24 @@ class User {
     this.description,
   });
 
+  static String? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is Timestamp) return value.toDate().toIso8601String();
+    return value.toString();
+  }
+
   factory User.fromMap(Map<String, dynamic> map) {
     return User(
       uid: map['uid'] ?? '',
       email: map['email'] ?? '',
       name: map['name'] ?? '',
-      role: UserRole.values.firstWhere(
-        (role) => role.name == map['role'],
-        orElse: () {
-          debugPrint('Unknown role: ${map['role']}');
-          return UserRole.vehicleOwner;
-        },
-      ),
+      role: UserRole.fromString(map['role']),
       phoneNumber: map['phoneNumber'],
       profileImageUrl: map['profileImageUrl'],
       businessName: map['businessName'],
       status: map['status'],
-      createdAt: map['createdAt'],
+      createdAt: _parseDate(map['createdAt']),
       address: map['address'],
       description: map['description'],
     );

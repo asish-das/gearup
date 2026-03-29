@@ -703,7 +703,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       } catch (e) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to book: \$e')),
+                          SnackBar(content: Text('Failed to book: $e')),
                         );
                       } finally {
                         if (mounted) {

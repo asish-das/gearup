@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 class LiveTrackingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // Initialize and get permissions
   Future<bool> requestPermission() async {
@@ -75,9 +77,25 @@ class LiveTrackingService {
         ),
       );
 
+      final user = _auth.currentUser;
+      String userName = 'User';
+      String userPhone = 'N/A';
+
+      if (user != null) {
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          userName = userData['name'] ?? 'User';
+          userPhone = userData['phoneNumber'] ?? 'N/A';
+        }
+      }
+
       final docRef = await _firestore.collection('emergencies').add({
-        'serviceName': serviceName,
-        'status': 'dispatched',
+        'serviceType': serviceName,
+        'status': 'PENDING',
+        'userId': user?.uid,
+        'userName': userName,
+        'userPhone': userPhone,
         'user_latitude': position.latitude,
         'user_longitude': position.longitude,
         'timestamp': FieldValue.serverTimestamp(),

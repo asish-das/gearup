@@ -131,7 +131,7 @@ class _RevenueViewState extends State<RevenueView> {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: iconColor.withOpacity(0.1),
+                              color: iconColor.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(iconData, color: iconColor, size: 20),
@@ -265,26 +265,30 @@ class _RevenueViewState extends State<RevenueView> {
               final service =
                   data['serviceName'] ?? data['service'] ?? 'Unknown';
 
-              totalRev += amount;
+              // Only count COMPLETED or PAID as actual revenue to avoid doubling or over-counting
+              if (status == 'COMPLETED' ||
+                  (data['paymentStatus'] ?? 'PENDING') == 'PAID') {
+                totalRev += amount;
 
-              if (apptDay == today) {
-                todayRev += amount;
-              }
-              if (appointmentDate.isAfter(
-                startOfWeek.subtract(const Duration(seconds: 1)),
-              )) {
-                weekRev += amount;
-              }
-              if (appointmentDate.isAfter(
-                startOfMonth.subtract(const Duration(seconds: 1)),
-              )) {
-                monthRev += amount;
-              }
+                if (apptDay == today) {
+                  todayRev += amount;
+                }
+                if (appointmentDate.isAfter(
+                  startOfWeek.subtract(const Duration(seconds: 1)),
+                )) {
+                  weekRev += amount;
+                }
+                if (appointmentDate.isAfter(
+                  startOfMonth.subtract(const Duration(seconds: 1)),
+                )) {
+                  monthRev += amount;
+                }
 
-              // Chart data (last 7 days)
-              final diffDays = today.difference(apptDay).inDays;
-              if (diffDays >= 0 && diffDays < 7) {
-                dailyRev[6 - diffDays] += amount;
+                // Chart data (last 7 days)
+                final diffDays = today.difference(apptDay).inDays;
+                if (diffDays >= 0 && diffDays < 7) {
+                  dailyRev[6 - diffDays] += amount;
+                }
               }
 
               serviceCounts[service] = (serviceCounts[service] ?? 0) + 1;
@@ -299,7 +303,7 @@ class _RevenueViewState extends State<RevenueView> {
                 'customer': data['customerName'] ?? data['name'] ?? 'Customer',
                 'userId': data['userId'], // Added userId for notifications
                 'amount': amount,
-                'displayAmount': '\$${amount.toStringAsFixed(2)}',
+                'displayAmount': '₹${amount.toStringAsFixed(2)}',
                 'status': status,
                 'paymentStatus': data['paymentStatus'] ?? 'PENDING',
                 'paymentMethod': data['paymentMethod'] ?? 'N/A',
@@ -479,7 +483,7 @@ class _RevenueViewState extends State<RevenueView> {
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -512,7 +516,7 @@ class _RevenueViewState extends State<RevenueView> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1).withOpacity(0.1),
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -533,7 +537,7 @@ class _RevenueViewState extends State<RevenueView> {
                       color: Colors.white70,
                     ),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.05),
+                      backgroundColor: Colors.white.withValues(alpha: 0.05),
                       padding: const EdgeInsets.all(8),
                     ),
                     onPressed: () => Navigator.pop(context),
@@ -611,7 +615,7 @@ class _RevenueViewState extends State<RevenueView> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.redAccent.withOpacity(0.3),
+                          color: Colors.redAccent.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -648,9 +652,9 @@ class _RevenueViewState extends State<RevenueView> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.05),
+                    color: Colors.red.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.red.withOpacity(0.2)),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -692,7 +696,7 @@ class _RevenueViewState extends State<RevenueView> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: iconColor, size: 20),
@@ -744,9 +748,9 @@ class _RevenueViewState extends State<RevenueView> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.2)),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
           ),
           child: Center(
             child: Text(
@@ -1385,7 +1389,7 @@ class _RevenueViewState extends State<RevenueView> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isActive
-              ? const Color(0xFF5D40D4).withOpacity(0.1)
+              ? const Color(0xFF5D40D4).withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
@@ -1564,7 +1568,7 @@ class _RevenueViewState extends State<RevenueView> {
       decoration: BoxDecoration(
         color: color.shade50,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Text(
         label.toUpperCase(),

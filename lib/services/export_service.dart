@@ -129,6 +129,7 @@ class ExportService {
                       'Model',
                       'Year',
                       'License Plate',
+                      'Mileage (KM)',
                       'Color',
                       'User ID',
                     ],
@@ -138,6 +139,7 @@ class ExportService {
                         vehicle.model,
                         vehicle.year,
                         vehicle.licensePlate,
+                        '${vehicle.kilometers} KM',
                         vehicle.color,
                         vehicle.userId,
                       ],
@@ -151,8 +153,9 @@ class ExportService {
                     1: pw.Alignment.centerLeft,
                     2: pw.Alignment.center,
                     3: pw.Alignment.center,
-                    4: pw.Alignment.centerLeft,
+                    4: pw.Alignment.center,
                     5: pw.Alignment.centerLeft,
+                    6: pw.Alignment.centerLeft,
                   },
                 ),
               ],
@@ -205,11 +208,11 @@ class ExportService {
       buffer.writeln('');
       buffer.writeln('VEHICLES');
       buffer.writeln(
-        'Make,Model,Year,License Plate,Color,Battery Level,User ID',
+        'Make,Model,Year,License Plate,Color,Mileage (KM),User ID',
       );
       for (var vehicle in vehicles) {
         buffer.writeln(
-          '"${vehicle.make}","${vehicle.model}","${vehicle.year}","${vehicle.licensePlate}","${vehicle.color}","${vehicle.batteryLevel}%","${vehicle.userId}"',
+          '"${vehicle.make}","${vehicle.model}","${vehicle.year}","${vehicle.licensePlate}","${vehicle.color}","${vehicle.kilometers} KM","${vehicle.userId}"',
         );
       }
 
@@ -276,7 +279,7 @@ class ExportService {
         buffer.writeln('Year: ${vehicle.year}');
         buffer.writeln('License Plate: ${vehicle.licensePlate}');
         buffer.writeln('Color: ${vehicle.color}');
-        buffer.writeln('Battery Level: ${vehicle.batteryLevel}%');
+        buffer.writeln('Mileage: ${vehicle.kilometers} KM');
         buffer.writeln('User ID: ${vehicle.userId}');
         buffer.writeln('');
       }

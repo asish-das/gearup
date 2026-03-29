@@ -10,6 +10,8 @@ import 'package:gearup/models/vehicle.dart';
 import 'package:gearup/mobile_user/service_centers.dart';
 import 'package:gearup/mobile_user/service_history.dart';
 import 'package:gearup/mobile_user/notification_screen.dart';
+import 'package:gearup/services/ai_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class HomeDashboard extends StatefulWidget {
   final Function(int)? onTabSelected;
@@ -34,12 +36,23 @@ class _HomeDashboardState extends State<HomeDashboard> {
     try {
       final user = AuthService.currentUser;
       if (user != null) {
+        // Load User Data first
         final userData = await AuthService.getUserData(user.uid);
-        final vehicles = await VehicleService.getUserVehicles(user.uid);
-
         setState(() {
           _currentUser = userData;
-          _primaryVehicle = vehicles.isNotEmpty ? vehicles.first : null;
+        });
+
+        // Then try to load vehicles independently
+        try {
+          final vehicles = await VehicleService.getUserVehicles(user.uid);
+          setState(() {
+            _primaryVehicle = vehicles.isNotEmpty ? vehicles.first : null;
+          });
+        } catch (vehicleError) {
+          debugPrint('Error loading vehicles: $vehicleError');
+        }
+
+        setState(() {
           _isLoading = false;
         });
       } else {
@@ -186,6 +199,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
             const SizedBox(height: 32),
             _buildVehicleCard(),
             const SizedBox(height: 32),
+            _buildAIRecommendations(),
+            const SizedBox(height: 32),
             const Text(
               'Quick Actions',
               style: TextStyle(
@@ -207,7 +222,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     'Service',
                     () {
                       if (widget.onTabSelected != null) {
-                        widget.onTabSelected!(1);
+                        widget.onTabSelected!(2);
                       } else {
                         Navigator.push(
                           context,
@@ -223,7 +238,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     'History',
                     () {
                       if (widget.onTabSelected != null) {
-                        widget.onTabSelected!(3);
+                        widget.onTabSelected!(4);
                       } else {
                         Navigator.push(
                           context,
@@ -247,6 +262,158 @@ class _HomeDashboardState extends State<HomeDashboard> {
             const SizedBox(height: 32),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAIRecommendations() {
+    if (_primaryVehicle == null) return const SizedBox.shrink();
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: AIService.aiConfigStream(),
+      builder: (context, snapshot) {
+        final config = snapshot.data?.data();
+        final enableHealth = config?['enable_health_alerts'] ?? true;
+        final enableSuggestions = config?['enable_service_suggestions'] ?? true;
+
+        if (!enableHealth && !enableSuggestions) return const SizedBox.shrink();
+
+        // Dynamic checks based on real vehicle data
+        final List<Widget> alerts = [];
+        
+        if (enableHealth) {
+          final kmSinceService = _primaryVehicle!.kilometers - _primaryVehicle!.lastServiceKm;
+          if (kmSinceService > 5000) {
+            alerts.add(_buildInsightCard(
+              'Maintenance Alert',
+              'Your ${_primaryVehicle!.make} has traveled $kmSinceService km since the last service. A checkup is recommended.',
+              Icons.warning_amber_rounded,
+              Colors.orangeAccent,
+            ));
+          } else if (!_primaryVehicle!.isConnected) {
+            alerts.add(_buildInsightCard(
+              'Connection Lost',
+              'We haven\'t received data from your vehicle in a while.',
+              Icons.link_off_rounded,
+              Colors.orangeAccent,
+            ));
+          } else {
+            // Default "Good Health" info
+            alerts.add(_buildInsightCard(
+              'System Health',
+              'All systems in your ${_primaryVehicle!.make} are performing optimally.',
+              Icons.check_circle_outline_rounded,
+              Colors.greenAccent,
+            ));
+          }
+        }
+
+        if (enableSuggestions) {
+          if (alerts.isNotEmpty) alerts.add(const SizedBox(height: 12));
+          
+          // Time-based or randomized relevant tips
+          final now = DateTime.now();
+          if (now.hour < 10) {
+            alerts.add(_buildInsightCard(
+              'Morning Tip',
+              'Smooth acceleration helps improve fuel/energy efficiency and extends engine life.',
+              Icons.lightbulb_outline_rounded,
+              AppTheme.primary,
+            ));
+          } else {
+            alerts.add(_buildInsightCard(
+              'Maintenance Tip',
+              'Check your tire pressure monthly for better safety and longevity.',
+              Icons.info_outline_rounded,
+              AppTheme.primary,
+            ));
+          }
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'AI Insights',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    'BETA',
+                    style: GoogleFonts.manrope(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...alerts,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildInsightCard(String title, String subtitle, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -482,6 +649,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final yearController = TextEditingController();
     final colorController = TextEditingController();
     final licensePlateController = TextEditingController();
+    final kmController = TextEditingController();
 
     showDialog(
       context: context,
@@ -582,10 +750,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                       const SizedBox(height: 16),
                       _buildThemedTextField(
-                        controller: licensePlateController,
-                        label: 'License Plate',
-                        hint: 'e.g., ABC-1234',
-                        icon: Icons.confirmation_number,
+                        controller: kmController,
+                        label: 'Current Kilometers',
+                        hint: 'e.g., 12000',
+                        icon: Icons.speed,
+                        keyboardType: TextInputType.number,
                       ),
                     ],
                   ),
@@ -636,7 +805,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 licensePlate: licensePlateController.text
                                     .trim(),
                                 userId: _currentUser!.uid,
-                                batteryLevel: 85.0,
+                                kilometers: int.tryParse(kmController.text.trim()) ?? 0,
+                                lastServiceKm: int.tryParse(kmController.text.trim()) ?? 0,
                                 isConnected: true,
                               );
 

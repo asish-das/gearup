@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gearup/mobile_user/main_navigation.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/live_tracking_map.dart';
 
 class ServiceTrackingScreen extends StatefulWidget {
@@ -30,6 +31,22 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   void initState() {
     super.initState();
     currentUser = FirebaseAuth.instance.currentUser;
+  }
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch dialer')),
+        );
+      }
+    }
   }
 
   @override
@@ -324,8 +341,8 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  Text(
+                                children: [
+                                  const Text(
                                     'Technician',
                                     style: TextStyle(
                                       color: Colors.white54,
@@ -333,8 +350,8 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                                     ),
                                   ),
                                   Text(
-                                    'GearUp Staff',
-                                    style: TextStyle(
+                                    data['technicianName'] ?? 'GearUp Staff',
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),
@@ -344,7 +361,19 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                             ),
                             FloatingActionButton.small(
                               backgroundColor: AppTheme.primary,
-                              onPressed: () {},
+                              onPressed: () {
+                                final techPhone = data['technicianPhone'];
+                                final centerPhone = data['centerPhone'];
+                                final phoneToCall = techPhone ?? centerPhone;
+                                
+                                if (phoneToCall != null && phoneToCall.toString().isNotEmpty) {
+                                  _makePhoneCall(phoneToCall.toString());
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Contact info not available')),
+                                  );
+                                }
+                              },
                               child: const Icon(
                                 Icons.call,
                                 color: Colors.white,
@@ -612,7 +641,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (_) =>
-                      MainNavigation(initialIndex: isCompleted ? 3 : 0),
+                      MainNavigation(initialIndex: isCompleted ? 4 : 0),
                 ),
                 (route) => false,
               );
@@ -636,52 +665,94 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   }
 
   Widget _buildEmergencyTab() {
-    if (!widget.isEmergency && widget.serviceName == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.check_circle_outline,
-              size: 80,
-              color: AppTheme.successGreen.withValues(alpha: 0.5),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No Active Emergencies',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Everything is looking good right now.',
-              style: TextStyle(color: Colors.white54),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MainNavigation()),
-                  (route) => false,
-                );
-              },
-              icon: const Icon(Icons.home),
-              label: const Text('Back to Home'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
+    if (currentUser == null) {
+      return const Center(
+        child: Text(
+          'Please log in to track emergencies',
+          style: TextStyle(color: Colors.white),
         ),
       );
     }
 
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('emergencies')
+          .where('userId', isEqualTo: currentUser!.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppTheme.primary),
+          );
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+        // Filter for active ones (PENDING or DISPATCHED)
+        final activeDocs = docs.where((doc) {
+          final status = (doc.data() as Map<String, dynamic>)['status'] ?? 'PENDING';
+          return status == 'PENDING' || status == 'DISPATCHED';
+        }).toList();
+
+        if (activeDocs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  size: 80,
+                  color: AppTheme.successGreen.withValues(alpha: 0.5),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No Active Emergencies',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Everything is looking good right now.',
+                  style: TextStyle(color: Colors.white54),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MainNavigation()),
+                      (route) => false,
+                    );
+                  },
+                  icon: const Icon(Icons.home),
+                  label: const Text('Back to Home'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final emergencyDoc = activeDocs.first;
+        final data = emergencyDoc.data() as Map<String, dynamic>;
+        return _buildActiveEmergency(data, emergencyDoc.id);
+      },
+    );
+  }
+
+  Widget _buildActiveEmergency(Map<String, dynamic> data, String id) {
+    final status = data['status'] ?? 'PENDING';
+    final service = data['serviceType'] ?? 'Emergency Assistance';
+    final personnel = data['dispatchedPersonnel'] as Map<String, dynamic>?;
+    final isDispatched = status == 'DISPATCHED';
+
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       child: Column(
         children: [
           Padding(
@@ -690,7 +761,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.redAccent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: Colors.redAccent.withValues(alpha: 0.3),
                 ),
@@ -717,7 +788,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              widget.serviceName ?? 'Emergency Assistance',
+                              service,
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -725,7 +796,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Request ID: ${widget.trackingId ?? 'Unknown'}',
+                              'Request ID: $id',
                               style: const TextStyle(
                                 color: Colors.white54,
                                 fontSize: 13,
@@ -745,13 +816,66 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(24),
                 child: LiveTrackingMap(
-                  trackingId: widget.trackingId ?? 'emergency_tracking',
+                  trackingId: id,
                 ),
               ),
             ),
           ),
+          if (personnel != null)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.person, color: Colors.white),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            personnel['name'] ?? 'Unknown Responder',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          Text(
+                            personnel['vehicleNo'] ?? 'No vehicle details',
+                            style: const TextStyle(color: Colors.white54, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        final contact = personnel['contact'];
+                        if (contact != null && contact.toString().isNotEmpty) {
+                          _makePhoneCall(contact.toString());
+                        }
+                      },
+                      icon: const Icon(Icons.call, color: AppTheme.primary),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -764,27 +888,21 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                 const SizedBox(height: 24),
                 _buildTimelineItem(
                   Icons.location_on,
-                  Colors.redAccent,
-                  'Team Dispatched',
-                  'Started 10 mins ago',
-                  isLineSolid: true,
-                  lineColor: Colors.redAccent,
+                  Colors.green,
+                  'Request Received',
+                  'Waiting for dispatch',
+                  isLineSolid: isDispatched,
+                  lineColor: isDispatched ? Colors.green : Colors.white24,
+                  isActive: status == 'PENDING',
                 ),
                 _buildTimelineItem(
                   Icons.directions_car,
-                  Colors.redAccent,
-                  'On The Way',
-                  'Active — ETA: 15 mins',
-                  isLineSolid: true,
-                  lineColor: Colors.redAccent.withValues(alpha: 0.2),
-                  isActive: true,
-                ),
-                _buildTimelineItem(
-                  Icons.handshake,
-                  Colors.white38,
-                  'Arrived at Location',
-                  'Pending',
+                  isDispatched ? Colors.blue : Colors.white24,
+                  'Team Dispatched',
+                  isDispatched ? 'Rescue team is on the way' : 'Pending...',
                   isLineSolid: false,
+                  lineColor: Colors.white24,
+                  isActive: isDispatched,
                   isLast: true,
                 ),
               ],

@@ -9,6 +9,8 @@ import 'package:gearup/mobile_user/service_history.dart';
 import 'package:gearup/mobile_user/profile_page.dart';
 import 'package:gearup/mobile_user/service_tracking.dart';
 import 'package:gearup/mobile_user/ai_chat_modal.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:gearup/services/ai_service.dart';
 import 'package:gearup/mobile_user/supermarket_screen.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -76,23 +78,41 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _screens[_currentIndex],
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (context) => Padding(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 20,
-              ),
-              child: const AIChatModal(),
-            ),
+      floatingActionButton: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: AIService.aiConfigStream(),
+        builder: (context, snapshot) {
+          final config = snapshot.data?.data();
+          final isEnabled = config?['enable_chatbot'] ?? true;
+          
+          if (!isEnabled) return const SizedBox.shrink();
+
+          return FloatingActionButton(
+            onPressed: () async {
+              final result = await showModalBottomSheet<dynamic>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => Padding(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 20,
+                  ),
+                  child: const AIChatModal(),
+                ),
+              );
+
+              if (result is int) {
+                setState(() => _currentIndex = result);
+              } else if (result == 'emergency') {
+                if (context.mounted) {
+                  Navigator.pushNamed(context, '/emergency');
+                }
+              }
+            },
+            backgroundColor: AppTheme.primary,
+            elevation: 4,
+            child: const Icon(Icons.smart_toy, color: Colors.white),
           );
         },
-        backgroundColor: AppTheme.primary,
-        elevation: 4,
-        child: const Icon(Icons.smart_toy, color: Colors.white),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

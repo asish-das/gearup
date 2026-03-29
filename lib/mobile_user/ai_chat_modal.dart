@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gearup/theme/app_theme.dart';
-import 'package:gearup/mobile_user/service_centers.dart';
-import 'package:gearup/mobile_user/emergency_screen.dart';
 
 class ChatMessage {
   final String text;
@@ -60,17 +58,24 @@ class _AIChatModalState extends State<AIChatModal> {
     List<String>? suggestions;
     final lowerText = userText.toLowerCase();
 
+    // Check for direct navigation requests
+    if (lowerText.contains("book service") || lowerText.contains("book appointment") || lowerText.contains("book now")) {
+      Navigator.pop(context, 2); // Return index 2 (Centers) to MainNavigation
+      return;
+    } else if (lowerText.contains("emergency request") || lowerText.contains("emergency assistance") || lowerText.contains("emergency help")) {
+      Navigator.pop(context, 'emergency'); // Return action to MainNavigation
+      return;
+    }
+
     // Check if the user is confirming a pending action
     if (lowerText == "yes" || lowerText == "sure" || lowerText == "ok" || lowerText == "yeah" || lowerText == "yep" || lowerText == "please") {
       if (_pendingAction == 'booking') {
         _pendingAction = null;
-        Navigator.pop(context); // Close the chat
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const ServiceCentersScreen()));
+        Navigator.pop(context, 2);
         return;
       } else if (_pendingAction == 'emergency') {
         _pendingAction = null;
-        Navigator.pop(context); // Close the chat
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const EmergencyScreen()));
+        Navigator.pop(context, 'emergency');
         return;
       }
     } else if (lowerText == "no" || lowerText == "no thanks" || lowerText.contains("not right now") || lowerText.contains("later")) {
@@ -88,37 +93,29 @@ class _AIChatModalState extends State<AIChatModal> {
     _pendingAction = null;
     
     if (lowerText.contains("making noise") || lowerText.contains("weird sound") || lowerText.contains("noise")) {
-      aiResponse = "Possible engine issue. Recommend inspection. Would you like to book an appointment with a nearby service center?";
-      _pendingAction = 'booking';
-      suggestions = ["Yes", "No, thanks"];
+      aiResponse = "A noise could indicate an engine or suspension issue. What type of service would you like to take?";
+      suggestions = ["Book Service", "Emergency Request", "No thanks"];
     } else if (lowerText.contains("brakes") || lowerText.contains("squeak")) {
-      aiResponse = "Brake pads might be worn out. It is crucial to have them checked for safety. Want me to help you book a service?";
-      _pendingAction = 'booking';
-      suggestions = ["Yes", "No"];
+      aiResponse = "Brake issues can be serious. What type of assistance do you need?";
+      suggestions = ["Book Service", "Emergency Request", "I'm okay"];
     } else if (lowerText.contains("oil") || lowerText.contains("change")) {
-      aiResponse = "You can book an oil change easily from the app. I recommend synthetic oil for better engine health. Should we open the list of centers?";
-      _pendingAction = 'booking';
-      suggestions = ["Yes", "Not now"];
+      aiResponse = "I recommend an oil change every 5,000 miles. Would you like to schedule one or do you need roadside help?";
+      suggestions = ["Book Service", "Emergency Request"];
     } else if (lowerText.contains("battery") || lowerText.contains("won't start")) {
-      aiResponse = "It looks like your battery might be dead or there's an alternator issue. Do you need emergency assistance?";
-      _pendingAction = 'emergency';
-      suggestions = ["Yes", "No"];
+      aiResponse = "Battery issues usually need immediate help. What would you like to do?";
+      suggestions = ["Book Service", "Emergency Request"];
     } else if (lowerText.contains("ac") || lowerText.contains("cold") || lowerText.contains("air condition")) {
-      aiResponse = "Your AC system might need a freon recharge or have a compressor issue. Want to check out some specialized service centers?";
-      _pendingAction = 'booking';
-      suggestions = ["Yes", "Maybe later"];
+      aiResponse = "Hot weather is tough without AC! How would you like to proceed?";
+      suggestions = ["Book Service", "Emergency Request"];
     } else if (lowerText.contains("steering") || lowerText.contains("shaking")) {
-      aiResponse = "A shaking steering wheel usually indicates an alignment problem or unbalanced tires. Schedule an inspection soon. Open service centers?";
-      _pendingAction = 'booking';
-      suggestions = ["Yes", "No"];
+      aiResponse = "Steering issues can be dangerous. What type of assistance would you like?";
+      suggestions = ["Book Service", "Emergency Request"];
     } else if (lowerText.contains("engine light")) {
-      aiResponse = "A check engine light can mean many things. I strongly recommend booking a diagnostic scan immediately. Want to book now?";
-      _pendingAction = 'booking';
-      suggestions = ["Yes", "I'll do it later"];
-    } else if (lowerText.contains("flat tire") || lowerText.contains("tire") || lowerText.contains("emergency assistance to help")) {
-      aiResponse = "We can dispatch emergency assistance to help with your tire. Do you want me to open the Emergency screen?";
-      _pendingAction = 'emergency';
-      suggestions = ["Yes", "No"];
+      aiResponse = "The engine light needs a specialized diagnostic scan. Would you like to book a scan or need emergency towing?";
+      suggestions = ["Book Service", "Emergency Request"];
+    } else if (lowerText.contains("flat tire") || lowerText.contains("tire")) {
+      aiResponse = "A flat tire is annoying! I can help you find a center or send emergency help right now.";
+      suggestions = ["Book Service", "Emergency Request"];
     }
 
     if (!mounted) return;

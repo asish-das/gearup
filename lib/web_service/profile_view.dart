@@ -528,7 +528,7 @@ class _ProfileViewState extends State<ProfileView> {
                     if (email.isNotEmpty) {
                       try {
                         await AuthService.resetPassword(email);
-                        if (mounted) {
+                        if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
@@ -539,7 +539,7 @@ class _ProfileViewState extends State<ProfileView> {
                           );
                         }
                       } catch (e) {
-                        if (mounted) {
+                        if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Error: $e'),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:universal_html/html.dart' as html;
+import 'dart:convert';
 
 class BookingsManagerView extends StatefulWidget {
   const BookingsManagerView({super.key});
@@ -12,6 +14,19 @@ class BookingsManagerView extends StatefulWidget {
 
 class _BookingsManagerViewState extends State<BookingsManagerView> {
   String _selectedTab = 'All';
+  DateTimeRange? _selectedDateRange;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize to current month
+    final now = DateTime.now();
+    _selectedDateRange = DateTimeRange(
+      start: DateTime(now.year, now.month, 1),
+      end: DateTime(now.year, now.month + 1, 0),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +48,7 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Bookings',
+                      'Bookings Management',
                       style: GoogleFonts.manrope(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -49,7 +64,7 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Bookings',
+                      'Bookings Management',
                       style: GoogleFonts.manrope(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -152,85 +167,43 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
                                       }
 
                                       final docs = snapshot.data!.docs.toList();
-                                      docs.sort((a, b) {
-                                        final da =
-                                            a.data() as Map<String, dynamic>;
-                                        final db =
-                                            b.data() as Map<String, dynamic>;
+                                      final bookings = _filterBookings(docs);
+
+                                      if (bookings.isEmpty) {
+                                        return const Center(
+                                          child: Text('No bookings found with current filters'),
+                                        );
+                                      }
+
+                                      // Sort by date descending
+                                      bookings.sort((a, b) {
+                                        final da = a.data() as Map<String, dynamic>;
+                                        final db = b.data() as Map<String, dynamic>;
 
                                         DateTime? dateA;
                                         if (da['appointmentDate'] != null) {
-                                          if (da['appointmentDate']
-                                              is Timestamp) {
-                                            dateA =
-                                                (da['appointmentDate']
-                                                        as Timestamp)
-                                                    .toDate();
+                                          if (da['appointmentDate'] is Timestamp) {
+                                            dateA = (da['appointmentDate'] as Timestamp).toDate();
                                           } else {
-                                            dateA = DateTime.tryParse(
-                                              da['appointmentDate'].toString(),
-                                            );
+                                            dateA = DateTime.tryParse(da['appointmentDate'].toString());
                                           }
-                                        } else if (da['createdAt'] != null &&
-                                            da['createdAt'] is Timestamp) {
-                                          dateA = (da['createdAt'] as Timestamp)
-                                              .toDate();
-                                        } else if (da['date'] != null) {
-                                          dateA = DateTime.tryParse(
-                                            da['date'].toString(),
-                                          );
+                                        } else if (da['createdAt'] != null && da['createdAt'] is Timestamp) {
+                                          dateA = (da['createdAt'] as Timestamp).toDate();
                                         }
 
                                         DateTime? dateB;
                                         if (db['appointmentDate'] != null) {
-                                          if (db['appointmentDate']
-                                              is Timestamp) {
-                                            dateB =
-                                                (db['appointmentDate']
-                                                        as Timestamp)
-                                                    .toDate();
+                                          if (db['appointmentDate'] is Timestamp) {
+                                            dateB = (db['appointmentDate'] as Timestamp).toDate();
                                           } else {
-                                            dateB = DateTime.tryParse(
-                                              db['appointmentDate'].toString(),
-                                            );
+                                            dateB = DateTime.tryParse(db['appointmentDate'].toString());
                                           }
-                                        } else if (db['createdAt'] != null &&
-                                            db['createdAt'] is Timestamp) {
-                                          dateB = (db['createdAt'] as Timestamp)
-                                              .toDate();
-                                        } else if (db['date'] != null) {
-                                          dateB = DateTime.tryParse(
-                                            db['date'].toString(),
-                                          );
+                                        } else if (db['createdAt'] != null && db['createdAt'] is Timestamp) {
+                                          dateB = (db['createdAt'] as Timestamp).toDate();
                                         }
 
-                                        return (dateB ?? DateTime.now())
-                                            .compareTo(dateA ?? DateTime.now());
+                                        return (dateB ?? DateTime.now()).compareTo(dateA ?? DateTime.now());
                                       });
-
-                                      List<QueryDocumentSnapshot> bookings = docs;
-                                      if (_selectedTab != 'All') {
-                                        bookings = docs.where((doc) {
-                                          final data = doc.data() as Map<String, dynamic>;
-                                          final status = (data['status'] ?? 'PENDING').toString().toUpperCase();
-                                          
-                                          if (_selectedTab == 'Pending' && status == 'PENDING') return true;
-                                          if (_selectedTab == 'Rejected' && status == 'REJECTED') return true;
-                                          if (_selectedTab == 'Accepted' && status == 'ACCEPTED') return true;
-                                          if (_selectedTab == 'Diagnostics' && status == 'DIAGNOSTICS') return true;
-                                          if (_selectedTab == 'In Service' && status == 'IN SERVICE') return true;
-                                          if (_selectedTab == 'Testing' && status == 'TESTING') return true;
-                                          if (_selectedTab == 'Completed' && status == 'COMPLETED') return true;
-                                          
-                                          return false;
-                                        }).toList();
-                                      }
-
-                                      if (bookings.isEmpty) {
-                                        return const Center(
-                                          child: Text('No bookings found in this category'),
-                                        );
-                                      }
 
                                       return ListView.builder(
                                         itemCount: bookings.length,
@@ -377,6 +350,11 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
             const SizedBox(width: 8),
             Expanded(
               child: TextField(
+                onChanged: (val) {
+                  setState(() {
+                    _searchQuery = val.toLowerCase();
+                  });
+                },
                 decoration: InputDecoration(
                   hintText: 'Search bookings...',
                   hintStyle: GoogleFonts.manrope(
@@ -391,69 +369,79 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
         ),
       ),
       if (isMobile) const SizedBox(height: 12) else const SizedBox(width: 16),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.calendar_today,
-                  color: Color(0xFF0F172A),
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${DateFormat('MMM dd').format(DateTime(DateTime.now().year, DateTime.now().month, 1))} - ${DateFormat('MMM dd').format(DateTime(DateTime.now().year, DateTime.now().month + 1, 0))}',
-                  style: GoogleFonts.manrope(
-                    color: const Color(0xFF0F172A),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+      InkWell(
+        onTap: _selectDateRange,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today,
+                    color: Color(0xFF0F172A),
+                    size: 18,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.expand_more, color: Color(0xFF64748B), size: 18),
-          ],
+                  const SizedBox(width: 8),
+                  Text(
+                    _selectedDateRange == null
+                        ? 'Select Dates'
+                        : '${DateFormat('MMM dd').format(_selectedDateRange!.start)} - ${DateFormat('MMM dd').format(_selectedDateRange!.end)}',
+                    style: GoogleFonts.manrope(
+                      color: const Color(0xFF0F172A),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.expand_more, color: Color(0xFF64748B), size: 18),
+            ],
+          ),
         ),
       ),
       if (isMobile) const SizedBox(height: 12) else const SizedBox(width: 16),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        width: isMobile ? double.infinity : null,
-        decoration: BoxDecoration(
-          color: const Color(0xFF5D40D4),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF5D40D4).withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.file_download, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Export',
-              style: GoogleFonts.manrope(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+      InkWell(
+        onTap: _exportBookingsToCSV,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          width: isMobile ? double.infinity : null,
+          decoration: BoxDecoration(
+            color: const Color(0xFF5D40D4),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF5D40D4).withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
               ),
-            ),
-          ],
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.file_download, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Export',
+                style: GoogleFonts.manrope(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ];
@@ -466,6 +454,142 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
     } else {
       return Row(children: actions);
     }
+  }
+
+  Future<void> _selectDateRange() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: _selectedDateRange,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(DateTime.now().year + 2),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF5D40D4),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF0F172A),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != _selectedDateRange) {
+      setState(() {
+        _selectedDateRange = picked;
+      });
+    }
+  }
+
+  Future<void> _exportBookingsToCSV() async {
+    // We'll use the current stream data if possible, but let's fetch once for the export
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('bookings').get();
+      final docs = _filterBookings(snapshot.docs);
+
+      if (docs.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No bookings to export for the selected filters.')),
+          );
+        }
+        return;
+      }
+
+      String csvData = 'Booking ID,Customer,Service Center,Service Type,Status,Date,Payment,Amount\n';
+      for (var doc in docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        String id = doc.id.toUpperCase();
+        String customer = (data['name'] ?? data['customerName'] ?? 'N/A').toString().replaceAll(',', '');
+        String center = (data['serviceCenterName'] ?? 'N/A').toString().replaceAll(',', '');
+        String type = (data['service'] ?? 'N/A').toString().replaceAll(',', '');
+        String status = (data['status'] ?? 'PENDING').toString();
+        
+        DateTime? dt;
+        if (data['appointmentDate'] is Timestamp) {
+          dt = (data['appointmentDate'] as Timestamp).toDate();
+        } else if (data['date'] != null) {
+          dt = DateTime.tryParse(data['date'].toString());
+        }
+        String dateStr = dt != null ? DateFormat('yyyy-MM-dd').format(dt) : 'N/A';
+        
+        String payment = (status.toUpperCase() == 'COMPLETED' ? 'Paid' : 'Pending');
+        String amount = data['amount']?.toString() ?? data['totalAmount']?.toString() ?? '0.00';
+
+        csvData += '$id,$customer,$center,$type,$status,$dateStr,$payment,$amount\n';
+      }
+
+      final bytes = utf8.encode(csvData);
+      final blob = html.Blob([bytes], 'text/csv');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      html.AnchorElement(href: url)
+        ..setAttribute('download', 'bookings_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv')
+        ..click();
+      html.Url.revokeObjectUrl(url);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bookings exported successfully.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
+  }
+
+  List<QueryDocumentSnapshot> _filterBookings(List<QueryDocumentSnapshot> docs) {
+    return docs.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      
+      // 1. Tab Filter
+      if (_selectedTab != 'All') {
+        final status = (data['status'] ?? 'PENDING').toString().toUpperCase();
+        if (_selectedTab == 'Pending' && status != 'PENDING') return false;
+        if (_selectedTab == 'Rejected' && status != 'REJECTED') return false;
+        if (_selectedTab == 'Accepted' && status != 'ACCEPTED') return false;
+        if (_selectedTab == 'Diagnostics' && status != 'DIAGNOSTICS') return false;
+        if (_selectedTab == 'In Service' && status != 'IN SERVICE') return false;
+        if (_selectedTab == 'Testing' && status != 'TESTING') return false;
+        if (_selectedTab == 'Completed' && status != 'COMPLETED') return false;
+      }
+
+      // 2. Date Range Filter
+      if (_selectedDateRange != null) {
+        DateTime? dt;
+        if (data['appointmentDate'] is Timestamp) {
+          dt = (data['appointmentDate'] as Timestamp).toDate();
+        } else if (data['date'] != null) {
+          dt = DateTime.tryParse(data['date'].toString());
+        }
+        
+        if (dt == null) return false;
+        
+        // Normalize dates to compare without time
+        final start = DateTime(_selectedDateRange!.start.year, _selectedDateRange!.start.month, _selectedDateRange!.start.day);
+        final end = DateTime(_selectedDateRange!.end.year, _selectedDateRange!.end.month, _selectedDateRange!.end.day);
+        final current = DateTime(dt.year, dt.month, dt.day);
+        
+        if (current.isBefore(start) || current.isAfter(end)) return false;
+      }
+
+      // 3. Search Filter
+      if (_searchQuery.isNotEmpty) {
+        final customer = (data['name'] ?? data['customerName'] ?? '').toString().toLowerCase();
+        final vehicle = (data['vehicle'] ?? '').toString().toLowerCase();
+        final id = doc.id.toLowerCase();
+        if (!customer.contains(_searchQuery) && !vehicle.contains(_searchQuery) && !id.contains(_searchQuery)) {
+          return false;
+        }
+      }
+
+      return true;
+    }).toList();
   }
 
   Widget _buildTableHeader() {

@@ -82,20 +82,37 @@ class VehicleService {
     }
   }
 
-  // Update battery level
-  static Future<void> updateBatteryLevel(
+  // Update current kilometers
+  static Future<void> updateMileage(
     String vehicleId,
-    double batteryLevel,
+    int kilometers,
   ) async {
     try {
       await _vehiclesCollection.doc(vehicleId).update({
-        'batteryLevel': batteryLevel,
+        'kilometers': kilometers,
         'updatedAt': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-      throw Exception('Failed to update battery level: $e');
+      throw Exception('Failed to update mileage: $e');
     }
   }
+
+  // Update last service kilometers
+  static Future<void> updateServiceKm(
+    String vehicleId,
+    int kilometers,
+  ) async {
+    try {
+      await _vehiclesCollection.doc(vehicleId).update({
+        'lastServiceKm': kilometers,
+        'kilometers': kilometers, // Usually service updates current mileage too
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      throw Exception('Failed to update service mileage: $e');
+    }
+  }
+
 
   // Update connection status
   static Future<void> updateConnectionStatus(

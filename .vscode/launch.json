@@ -10,6 +10,11 @@
             "type": "dart"
         },
         {
+            "name": "owner_app (Flutter Redmi Note 8 Pro)",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
             "name": "owner_app (profile mode)",
             "request": "launch",
             "type": "dart",

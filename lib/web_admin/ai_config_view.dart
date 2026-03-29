@@ -550,7 +550,7 @@ class _AIConfigViewState extends State<AIConfigView> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: const Color(0xFF5D40D4),
+            activeThumbColor: const Color(0xFF5D40D4),
           ),
         ],
       ),

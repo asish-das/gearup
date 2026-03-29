@@ -81,7 +81,7 @@ class ServiceSelectionScreen extends StatelessWidget {
                                   end: Alignment.bottomCenter,
                                   colors: [
                                     Colors.transparent,
-                                    AppTheme.backgroundDark.withOpacity(0.8),
+                                    AppTheme.backgroundDark.withValues(alpha: 0.8),
                                     AppTheme.backgroundDark,
                                   ],
                                 ),
@@ -240,9 +240,9 @@ class ServiceSelectionScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface.withOpacity(0.3),
+        color: AppTheme.surface.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,7 +380,7 @@ class ServiceSelectionScreen extends StatelessWidget {
   Widget _buildHeaderImage(String? source) {
     if (source == null || source.isEmpty) {
       return Container(
-        color: AppTheme.primary.withOpacity(0.1),
+        color: AppTheme.primary.withValues(alpha: 0.1),
       );
     }
 
@@ -391,12 +391,12 @@ class ServiceSelectionScreen extends StatelessWidget {
           base64Decode(base64Str),
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) => Container(
-            color: AppTheme.primary.withOpacity(0.1),
+            color: AppTheme.primary.withValues(alpha: 0.1),
           ),
         );
       } catch (e) {
         return Container(
-          color: AppTheme.primary.withOpacity(0.1),
+          color: AppTheme.primary.withValues(alpha: 0.1),
         );
       }
     }
@@ -405,7 +405,7 @@ class ServiceSelectionScreen extends StatelessWidget {
       source,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => Container(
-        color: AppTheme.primary.withOpacity(0.1),
+        color: AppTheme.primary.withValues(alpha: 0.1),
       ),
     );
   }

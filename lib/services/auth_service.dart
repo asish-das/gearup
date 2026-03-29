@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 
 class AuthService {
@@ -8,6 +9,14 @@ class AuthService {
 
   // Get current user stream
   static Stream<auth.User?> get authStateChanges => _auth.authStateChanges();
+
+  // Initialize and configure for development
+  static Future<void> initialize() async {
+    if (kDebugMode) {
+      debugPrint('AuthService: Running in Debug Mode - Disabling App Verification for Testing');
+      await _auth.setSettings(appVerificationDisabledForTesting: true);
+    }
+  }
 
   // Get current user
   static auth.User? get currentUser => _auth.currentUser;
@@ -23,10 +32,15 @@ class AuthService {
   }) async {
     try {
       // Create user with email and password
+      debugPrint('AuthService: Starting createUserWithEmailAndPassword for $email');
       auth.UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
-      );
+      ).timeout(const Duration(seconds: 30), onTimeout: () {
+        debugPrint('AuthService: createUserWithEmailAndPassword timed out');
+        throw 'The authentication request timed out. Please check your internet connection and try again.';
+      });
+      debugPrint('AuthService: User created with UID: ${result.user?.uid}');
 
       // Create user document in Firestore
       User user = User(
@@ -40,10 +54,16 @@ class AuthService {
         createdAt: DateTime.now().toIso8601String(),
       );
 
+      debugPrint('AuthService: Setting user document in Firestore');
       await _firestore.collection('users').doc(user.uid).set(user.toMap());
-
+      debugPrint('AuthService: User document set successfully');
+      
       return result.user!.uid;
+    } on auth.FirebaseAuthException catch (e) {
+      debugPrint('AuthService: FirebaseAuthException: ${e.code} - ${e.message}');
+      throw e.message ?? 'An unknown authentication error occurred';
     } catch (e) {
+      debugPrint('AuthService: Error during signUp: $e');
       throw e.toString();
     }
   }
@@ -81,21 +101,40 @@ class AuthService {
 
   // Get user data from Firestore
   static Future<User> getUserData(String uid) async {
-    try {
-      DocumentSnapshot doc = await _firestore
-          .collection('users')
-          .doc(uid)
-          .get();
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['uid'] = doc.id;
-        return User.fromMap(data);
-      } else {
-        throw 'User not found';
+    int retries = 0;
+    const maxRetries = 5;
+
+    while (retries < maxRetries) {
+      try {
+        DocumentSnapshot doc = await _firestore
+            .collection('users')
+            .doc(uid)
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['uid'] = doc.id;
+          return User.fromMap(data);
+        }
+        
+        // If not found, wait a bit and retry
+        retries++;
+        if (retries < maxRetries) {
+          debugPrint('AuthService: User document not found for $uid, retrying ($retries/$maxRetries)...');
+          await Future.delayed(Duration(milliseconds: 500 * retries));
+        } else {
+          throw 'User not found';
+        }
+      } catch (e) {
+        if (retries >= maxRetries - 1) {
+          debugPrint('AuthService: Error getting user data: $e');
+          throw e.toString();
+        }
+        retries++;
+        await Future.delayed(Duration(milliseconds: 500 * retries));
       }
-    } catch (e) {
-      throw e.toString();
     }
+    throw 'User not found';
   }
 
   // Sign out

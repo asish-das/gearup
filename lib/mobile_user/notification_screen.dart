@@ -89,7 +89,7 @@ class NotificationScreen extends StatelessWidget {
                   Icon(
                     Icons.notifications_off_outlined,
                     size: 80,
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -123,13 +123,13 @@ class NotificationScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: isRead
-                        ? AppTheme.surface.withOpacity(0.3)
-                        : AppTheme.surface.withOpacity(0.8),
+                        ? AppTheme.surface.withValues(alpha: 0.3)
+                        : AppTheme.surface.withValues(alpha: 0.8),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isRead
-                          ? Colors.white.withOpacity(0.05)
-                          : AppTheme.primary.withOpacity(0.3),
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : AppTheme.primary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -138,7 +138,7 @@ class NotificationScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: _getIconColor(data['type']).withOpacity(0.1),
+                          color: _getIconColor(data['type']).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(

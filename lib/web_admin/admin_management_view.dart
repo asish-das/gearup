@@ -85,6 +85,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
     setState(() => _isCreating = true);
 
     try {
+      debugPrint('AdminManagement: Creating secondary app...');
       FirebaseApp secondaryApp;
       try {
         secondaryApp = Firebase.app('SecondaryApp');
@@ -96,17 +97,20 @@ class _AdminManagementViewState extends State<AdminManagementView> {
       }
 
       final auth = firebase_auth.FirebaseAuth.instanceFor(app: secondaryApp);
+      debugPrint('AdminManagement: Calling createUserWithEmailAndPassword...');
       final cred = await auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+      
+      debugPrint('AdminManagement: User created (UID: ${cred.user?.uid}). Creating Firestore doc...');
 
       final newUser = app_models.User(
         uid: cred.user!.uid,
         email: _emailController.text.trim(),
         name: _nameController.text.trim(),
         role: _selectedRole!,
-        status: 'pending',
+        status: 'active',
         createdAt: DateTime.now().toIso8601String(),
       );
 
@@ -115,20 +119,34 @@ class _AdminManagementViewState extends State<AdminManagementView> {
           .doc(newUser.uid)
           .set(newUser.toMap());
 
+      debugPrint('AdminManagement: Firestore doc created. Signing out of secondary app...');
       await auth.signOut();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Admin created successfully!')));
-        _nameController.clear();
-        _emailController.clear();
-        _passwordController.clear();
-        setState(() => _selectedRole = null);
+          const SnackBar(
+            content: Text('Admin created successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      debugPrint('AdminManagement: FirebaseAuthException: ${e.code}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Auth error: ${e.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
+      debugPrint('AdminManagement: Generic error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
       }
     } finally {
       if (mounted) setState(() => _isCreating = false);
@@ -338,7 +356,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
             border: Border.all(color: const Color(0xFFE2E8F0)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -355,7 +373,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
             border: Border.all(color: const Color(0xFFE2E8F0)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -447,7 +465,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -558,7 +576,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF5D40D4).withOpacity(0.2),
+              color: const Color(0xFF5D40D4).withValues(alpha: 0.2),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -590,7 +608,7 @@ class _AdminManagementViewState extends State<AdminManagementView> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -666,12 +684,12 @@ class _AdminManagementViewState extends State<AdminManagementView> {
                    : 'AD';
                    
                 String dateString = 'Unknown';
-                if (admin.createdAt != null) {
                   try {
                      final d = DateTime.parse(admin.createdAt!);
                      dateString = DateFormat('MMM dd, yyyy').format(d);
-                  } catch(e) {}
-                }
+                  } catch(e) {
+                    debugPrint('Error parsing admin createdAt: $e');
+                  }
 
                 return _buildTableRow(
                   admin,

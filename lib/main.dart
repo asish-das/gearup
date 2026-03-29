@@ -23,6 +23,7 @@ import 'package:gearup/access_denied_screens.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseConfig.initialize();
+  await AuthService.initialize(); // Initialize our auth settings
   runApp(const GearUpApp());
 }
 
@@ -45,8 +46,9 @@ class _GearUpAppState extends State<GearUpApp> {
 
   Future<void> _initializeAuth() async {
     AuthService.authStateChanges.listen((user) async {
-      if (user != null) {
-        try {
+      try {
+        if (user != null) {
+          debugPrint('Main: Auth state change: User is logged in (${user.uid}). Fetching data...');
           final userData = await AuthService.getUserData(user.uid);
           if (mounted) {
             setState(() {
@@ -54,7 +56,8 @@ class _GearUpAppState extends State<GearUpApp> {
               _isLoading = false;
             });
           }
-        } catch (e) {
+        } else {
+          debugPrint('Main: Auth state change: No user logged in.');
           if (mounted) {
             setState(() {
               _currentUser = null;
@@ -62,7 +65,10 @@ class _GearUpAppState extends State<GearUpApp> {
             });
           }
         }
-      } else {
+      } catch (e) {
+        debugPrint('Main: Error in auth listener: $e');
+        // If we can't get data for a logged in user, better to logout to avoid desync
+        await AuthService.signOut();
         if (mounted) {
           setState(() {
             _currentUser = null;
@@ -109,7 +115,6 @@ class _GearUpAppState extends State<GearUpApp> {
 
     // Authenticated - route based on role and platform
     if (kIsWeb) {
-      // Web: Admin and Service Center only
       switch (_currentUser!.role) {
         case UserRole.serviceCenter:
           if (_currentUser!.status == 'pending') {
@@ -120,25 +125,27 @@ class _GearUpAppState extends State<GearUpApp> {
           return const ServiceScaffold();
         case UserRole.admin:
         case UserRole.superAdmin:
+          // Admin bypass for bootstrap email
+          if (_currentUser!.email != 'admin@gmail.com') {
+            if (_currentUser!.status == 'pending') {
+              return const WebApprovalPendingScreen();
+            } else if (_currentUser!.status == 'suspended') {
+              return const WebAccountSuspendedScreen();
+            }
+          }
           return const AdminScaffold();
-        case UserRole.vehicleOwner:
-          // Vehicle owners should use mobile app, not web
+        default:
           return const WebAccessDeniedScreen();
       }
     } else {
-      // Mobile: Vehicle owners only
-      switch (_currentUser!.role) {
-        case UserRole.vehicleOwner:
-          if (_currentUser!.status == 'suspended') {
-            return const WebAccountSuspendedScreen();
-          }
-          return const MainNavigation();
-        case UserRole.serviceCenter:
-        case UserRole.admin:
-        case UserRole.superAdmin:
-          // Admin and Service Center should use web, not mobile
-          return const MobileAccessDeniedScreen();
+      // Mobile
+      if (_currentUser!.role == UserRole.vehicleOwner) {
+        if (_currentUser!.status == 'suspended') {
+          return const WebAccountSuspendedScreen();
+        }
+        return const MainNavigation();
       }
+      return const MobileAccessDeniedScreen();
     }
   }
 

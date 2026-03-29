@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import '../services/live_tracking_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EmergencyScreen extends StatelessWidget {
   const EmergencyScreen({super.key});
@@ -272,16 +273,19 @@ class EmergencyScreen extends StatelessWidget {
       context: context,
       builder: (context) {
         String locationDescription = 'Fetching location...';
-        bool isFetching = true;
+        bool isLocationFetching = true;
+        String? selectedCenterId;
+        String? selectedCenterName;
+        bool findNearest = true;
 
         return StatefulBuilder(
           builder: (context, setState) {
-            if (isFetching) {
+            if (isLocationFetching) {
               _fetchCurrentAddress().then((address) {
                 if (context.mounted) {
                   setState(() {
                     locationDescription = address ?? 'Current GPS Location';
-                    isFetching = false;
+                    isLocationFetching = false;
                   });
                 }
               });
@@ -290,102 +294,223 @@ class EmergencyScreen extends StatelessWidget {
             return AlertDialog(
               backgroundColor: AppTheme.surface,
               title: Text('Dispatch $serviceName?'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'A service vehicle will be dispatched to your current GPS location:',
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppTheme.backgroundDark,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: AppTheme.primary.withValues(alpha: 0.3),
-                      ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'A service vehicle will be dispatched to your current GPS location:',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
                     ),
-                    child: Row(
-                      children: [
-                        if (isFetching) ...[
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ] else ...[
-                          const Icon(
-                            Icons.my_location,
-                            color: AppTheme.primary,
-                            size: 20,
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.backgroundDark,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          if (isLocationFetching) ...[
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ] else ...[
+                            const Icon(
+                              Icons.my_location,
+                              color: AppTheme.primary,
+                              size: 20,
+                            ),
+                          ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              locationDescription,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
                           ),
                         ],
-                        const SizedBox(width: 8),
-                        Expanded(
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Select Service Center',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() => findNearest = !findNearest);
+                          },
                           child: Text(
-                            locationDescription,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            findNearest ? 'Show All' : 'Find Nearest',
+                            style: const TextStyle(color: AppTheme.primary, fontSize: 12),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 180,
+                      decoration: BoxDecoration(
+                        color: Colors.black26,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('users')
+                            .where('role', isEqualTo: 'serviceCenter')
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                          
+                          var centers = snapshot.data!.docs.where((doc) {
+                            final d = doc.data() as Map<String, dynamic>;
+                            return d['status'] == 'approved' || d['status'] == 'active';
+                          }).toList();
+
+                          if (centers.isEmpty) {
+                            return const Center(child: Text("No centers available", style: TextStyle(color: Colors.white38)));
+                          }
+
+                          // If findNearest is true and none selected, pick the first one as default
+                          if (selectedCenterId == null && centers.isNotEmpty) {
+                            selectedCenterId = centers.first.id;
+                            selectedCenterName = (centers.first.data() as Map<String, dynamic>)['businessName'] ?? 'Center';
+                          }
+
+                          return ListView.builder(
+                            padding: const EdgeInsets.all(8),
+                            itemCount: centers.length,
+                            itemBuilder: (context, index) {
+                              final centerData = centers[index].data() as Map<String, dynamic>;
+                              final cid = centers[index].id;
+                              final cName = centerData['businessName'] ?? centerData['name'] ?? 'Center';
+                              final isSelected = selectedCenterId == cid;
+
+                              return InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    selectedCenterId = cid;
+                                    selectedCenterName = cName;
+                                    findNearest = false;
+                                  });
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? AppTheme.primary.withValues(alpha: 0.1) : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isSelected ? AppTheme.primary : Colors.white12,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        isSelected ? Icons.check_circle : Icons.circle_outlined,
+                                        color: isSelected ? AppTheme.primary : Colors.white24,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(cName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                            Text(centerData['address'] ?? 'Nearby', style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: Colors.white54),
-                  ),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
                     foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: () async {
+                  onPressed: selectedCenterId == null ? null : () async {
+                    // Show loading
                     showDialog(
                       context: context,
                       barrierDismissible: false,
-                      builder: (context) => const Center(
-                        child: CircularProgressIndicator(
-                          color: Colors.redAccent,
-                        ),
-                      ),
+                      builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.redAccent)),
                     );
 
                     try {
-                      final trackingService = LiveTrackingService();
-                      String? trackingId = await trackingService
-                          .createEmergencyRequest(serviceName);
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user == null) throw "User not authenticated";
+
+                      // Get user details
+                      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+                      final userData = userDoc.data() as Map<String, dynamic>;
+
+                      final emergencyRef = FirebaseFirestore.instance.collection('emergencies').doc();
+                      await emergencyRef.set({
+                        'serviceType': serviceName,
+                        'serviceCenterId': selectedCenterId,
+                        'serviceCenterName': selectedCenterName,
+                        'userId': user.uid,
+                        'userName': userData['name'] ?? 'User',
+                        'userPhone': userData['phoneNumber'] ?? user.phoneNumber ?? 'N/A',
+                        'address': locationDescription,
+                        'timestamp': FieldValue.serverTimestamp(),
+                        'status': 'PENDING',
+                      });
 
                       if (context.mounted) {
-                        Navigator.pop(context); // pop loading dialog
+                        Navigator.pop(context); // pop loading
                         Navigator.pop(context); // pop dispatch dialog
+                        
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Emergency assistance requested! Stay safe.')),
+                        );
+
                         Navigator.pushNamed(
                           context,
                           '/tracking',
                           arguments: {
                             'isEmergency': true,
                             'serviceName': serviceName,
-                            'trackingId': trackingId,
+                            'trackingId': emergencyRef.id,
                           },
                         );
                       }
                     } catch (e) {
                       if (context.mounted) {
-                        Navigator.pop(context); // pop loading dialog
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Dispatch failed: $e')),
-                        );
+                        Navigator.pop(context); // pop loading
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
                       }
                     }
                   },
-                  child: const Text('Confirm Emergency Dispatch'),
+                  child: const Text('Confirm Dispatch'),
                 ),
               ],
             );

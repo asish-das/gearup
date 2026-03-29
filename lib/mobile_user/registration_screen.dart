@@ -41,6 +41,69 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     super.dispose();
   }
 
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_addVehicle && (_selectedMake == null || _selectedMake == 'Select Make')) {
+      setState(() {
+        _errorMessage = 'Please select a vehicle make';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      debugPrint('RegistrationScreen: Starting registration process...');
+      String uid = await AuthService.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        name: _nameController.text.trim(),
+        role: _selectedRole,
+        phoneNumber: _phoneController.text.trim(),
+      );
+      debugPrint('RegistrationScreen: signUp successful. UID: $uid');
+
+      if (_addVehicle) {
+        debugPrint('RegistrationScreen: Adding vehicle...');
+        final vehicle = Vehicle(
+          id: '',
+          userId: uid,
+          make: _selectedMake!,
+          model: _modelController.text.trim(),
+          year: _yearController.text.trim().isEmpty
+              ? '2024'
+              : _yearController.text.trim(),
+          licensePlate: 'None',
+          color: 'Unknown',
+        );
+        await VehicleService.addVehicle(vehicle);
+        debugPrint('RegistrationScreen: Vehicle added successfully');
+      }
+
+      if (mounted) {
+        debugPrint('RegistrationScreen: Redirecting to home...');
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } catch (e) {
+      debugPrint('RegistrationScreen: Registration failed: $e');
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -544,62 +607,5 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
       ],
     );
-  }
-
-  Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      String uid = await AuthService.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        name: _nameController.text.trim(),
-        role: _selectedRole,
-        phoneNumber: _phoneController.text.trim(),
-      );
-
-      if (_addVehicle) {
-        if (_selectedMake == 'Select Make') {
-          setState(() {
-            _errorMessage = 'Please select a vehicle make';
-            _isLoading = false;
-          });
-          return;
-        }
-
-        await VehicleService.addVehicle(
-          Vehicle(
-            id: '',
-            userId: uid,
-            make: _selectedMake!,
-            model: _modelController.text.trim(),
-            year: _yearController.text.trim().isEmpty
-                ? '2024'
-                : _yearController.text.trim(),
-            licensePlate: 'None',
-            color: 'Unknown',
-          ),
-        );
-      }
-
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
   }
 }

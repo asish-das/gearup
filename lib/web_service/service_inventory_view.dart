@@ -401,7 +401,7 @@ class _ServiceInventoryViewState extends State<ServiceInventoryView> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (val) => setState(() => _selectedCategory = val!),
                 decoration: const InputDecoration(labelText: 'Category'),
@@ -427,6 +427,7 @@ class _ServiceInventoryViewState extends State<ServiceInventoryView> {
               } else {
                 await FirebaseFirestore.instance.collection('spareParts').doc(docId).update(data);
               }
+              if (!context.mounted) return;
               Navigator.pop(context);
             },
             child: const Text('Save'),

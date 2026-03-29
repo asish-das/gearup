@@ -580,7 +580,7 @@ class _SystemSettingsViewState extends State<SystemSettingsView> {
               Switch(
                 value: _settings.darkMode,
                 onChanged: _updateAppearance,
-                activeColor: const Color(0xFF5D40D4),
+                activeThumbColor: const Color(0xFF5D40D4),
               ),
             ],
           ),
@@ -592,7 +592,7 @@ class _SystemSettingsViewState extends State<SystemSettingsView> {
           const SizedBox(height: 12),
           Row(
             children: colors.map((color) {
-              final hex = '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+              final hex = '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
               bool isSelected = _settings.accentColor == hex;
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
@@ -774,7 +774,7 @@ class _SystemSettingsViewState extends State<SystemSettingsView> {
         Switch(
           value: value,
           onChanged: (v) => _updateToggle(key, v),
-          activeColor: const Color(0xFF5D40D4),
+          activeThumbColor: const Color(0xFF5D40D4),
         ),
       ],
     );
