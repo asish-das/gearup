@@ -5,7 +5,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:gearup/services/auth_service.dart';
 import 'package:gearup/models/user.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import 'package:gearup/services/vehicle_service.dart';
 import 'package:gearup/models/vehicle.dart';
@@ -61,6 +60,9 @@ class _ProfilePageState extends State<ProfilePage> {
       final picker = ImagePicker();
       final XFile? imageFile = await picker.pickImage(
         source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 70,
       );
       if (imageFile != null) {
         final File image = File(imageFile.path);
@@ -84,23 +86,12 @@ class _ProfilePageState extends State<ProfilePage> {
         _isLoading = true;
       });
 
-      // Create a reference to the location you want to upload to
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('users')
-          .child(_currentUser!.uid)
-          .child('profile_images')
-          .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
-
-      // Upload the file
-      final uploadTask = storageRef.putFile(image);
-
-      // Wait for the upload to complete
-      final snapshot = await uploadTask;
-      final downloadUrl = await snapshot.ref.getDownloadURL();
+      // Encode image to Base64 string directly
+      final bytes = await image.readAsBytes();
+      final base64Image = "data:image/jpeg;base64,${base64Encode(bytes)}";
 
       // Update user data in Firestore
-      await AuthService.updateProfileImageUrl(_currentUser!.uid, downloadUrl);
+      await AuthService.updateProfileImageUrl(_currentUser!.uid, base64Image);
 
       // Reload user data to get updated profile image
       await _loadUserData();
@@ -110,7 +101,7 @@ class _ProfilePageState extends State<ProfilePage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Profile image uploaded successfully!'),
+              content: Text('Profile image stored successfully!'),
               backgroundColor: Colors.green,
             ),
           );
@@ -126,6 +117,51 @@ class _ProfilePageState extends State<ProfilePage> {
             content: Text('Error uploading image: $e'),
             backgroundColor: Colors.red,
           ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickVehicleImage(Vehicle vehicle) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? imageFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 70,
+      );
+      if (imageFile != null) {
+        setState(() {
+          _isLoadingVehicles = true;
+        });
+        
+        final File image = File(imageFile.path);
+        final bytes = await image.readAsBytes();
+        final base64Image = "data:image/jpeg;base64,${base64Encode(bytes)}";
+
+        await VehicleService.updateVehicle(vehicle.id, {
+          'imageUrl': base64Image,
+        });
+
+        await _loadUserData(); // Reload list
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vehicle image saved successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingVehicles = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking vehicle image: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -281,69 +317,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 16),
             _buildVehiclesSection(),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.notification_important,
-                      color: Colors.orange,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Insurance Reminder',
-                          style: TextStyle(
-                            color: Colors.orange,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Your policy for Tesla Model S expires in 14 days.',
-                          style: TextStyle(color: Colors.white70, fontSize: 13),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: () {},
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(0, 0),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: const Text(
-                            'Renew Now',
-                            style: TextStyle(
-                              color: Colors.orange,
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.close, color: Colors.white54, size: 20),
-                ],
-              ),
-            ),
+
             const SizedBox(height: 12),
             _buildListTile(
               Icons.history,
@@ -548,48 +522,72 @@ class _ProfilePageState extends State<ProfilePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Vehicle Image or Icon
-                        Container(
-                          width: 72,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            color: AppTheme.backgroundDark,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppTheme.primary.withValues(alpha: 0.5),
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.primary.withValues(alpha: 0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: vehicle.imageUrl.isNotEmpty
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(18),
-                                  child: Image.network(
-                                    vehicle.imageUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(
+                        GestureDetector(
+                          onTap: () => _pickVehicleImage(vehicle),
+                          child: Stack(
+                            children: [
+                              Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.backgroundDark,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: AppTheme.primary.withValues(alpha: 0.5),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppTheme.primary.withValues(alpha: 0.2),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: vehicle.imageUrl.isNotEmpty && _getProfileImageProvider(vehicle.imageUrl) != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(18),
+                                        child: Image(
+                                          image: _getProfileImageProvider(vehicle.imageUrl)!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Icon(
+                                              Icons.directions_car,
+                                              color: AppTheme.primary.withValues(
+                                                alpha: 0.8,
+                                              ),
+                                              size: 32,
+                                            );
+                                          },
+                                        ),
+                                      )
+                                    : Icon(
                                         Icons.directions_car,
                                         color: AppTheme.primary.withValues(
                                           alpha: 0.8,
                                         ),
                                         size: 32,
-                                      );
-                                    },
+                                      ),
+                              ),
+                              Positioned(
+                                bottom: -4,
+                                right: -4,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: AppTheme.surface, width: 2),
                                   ),
-                                )
-                              : Icon(
-                                  Icons.directions_car,
-                                  color: AppTheme.primary.withValues(
-                                    alpha: 0.8,
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                    size: 12,
                                   ),
-                                  size: 32,
                                 ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(width: 16),
                         // Vehicle Identity

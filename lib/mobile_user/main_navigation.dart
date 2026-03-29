@@ -8,6 +8,8 @@ import 'package:gearup/mobile_user/service_centers.dart';
 import 'package:gearup/mobile_user/service_history.dart';
 import 'package:gearup/mobile_user/profile_page.dart';
 import 'package:gearup/mobile_user/service_tracking.dart';
+import 'package:gearup/mobile_user/ai_chat_modal.dart';
+import 'package:gearup/mobile_user/supermarket_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   final int initialIndex;
@@ -59,8 +61,11 @@ class _MainNavigationState extends State<MainNavigation> {
     super.dispose();
   }
 
-  final List<Widget> _screens = [
-    const HomeDashboard(),
+  List<Widget> get _screens => [
+    HomeDashboard(onTabSelected: (index) {
+      setState(() => _currentIndex = index);
+    }),
+    const SupermarketScreen(),
     const ServiceCentersScreen(),
     const ServiceTrackingScreen(),
     const ServiceHistoryScreen(),
@@ -71,6 +76,24 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _screens[_currentIndex],
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 20,
+              ),
+              child: const AIChatModal(),
+            ),
+          );
+        },
+        backgroundColor: AppTheme.primary,
+        elevation: 4,
+        child: const Icon(Icons.smart_toy, color: Colors.white),
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppTheme.backgroundDark.withValues(alpha: 0.95),
@@ -88,6 +111,10 @@ class _MainNavigationState extends State<MainNavigation> {
           onTap: (index) => setState(() => _currentIndex = index),
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shopping_cart),
+              label: 'SHOP',
+            ),
             BottomNavigationBarItem(
               icon: Icon(Icons.location_city),
               label: 'CENTERS',

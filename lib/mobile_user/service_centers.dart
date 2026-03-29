@@ -25,14 +25,7 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
           style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.5),
         ),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.white,
-            size: 20,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: Colors.white70),

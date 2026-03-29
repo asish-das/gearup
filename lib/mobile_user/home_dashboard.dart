@@ -12,7 +12,8 @@ import 'package:gearup/mobile_user/service_history.dart';
 import 'package:gearup/mobile_user/notification_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
-  const HomeDashboard({super.key});
+  final Function(int)? onTabSelected;
+  const HomeDashboard({super.key, this.onTabSelected});
 
   @override
   State<HomeDashboard> createState() => _HomeDashboardState();
@@ -204,22 +205,34 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   _buildQuickAction(
                     Icons.calendar_month_outlined,
                     'Service',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ServiceCentersScreen(),
-                      ),
-                    ),
+                    () {
+                      if (widget.onTabSelected != null) {
+                        widget.onTabSelected!(1);
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ServiceCentersScreen(),
+                          ),
+                        );
+                      }
+                    },
                   ),
                   _buildQuickAction(
                     Icons.history_outlined,
                     'History',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ServiceHistoryScreen(),
-                      ),
-                    ),
+                    () {
+                      if (widget.onTabSelected != null) {
+                        widget.onTabSelected!(3);
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ServiceHistoryScreen(),
+                          ),
+                        );
+                      }
+                    },
                   ),
                   _buildQuickAction(Icons.near_me_outlined, 'Nearby', () {}),
                   _buildQuickAction(
@@ -322,15 +335,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     ),
                     color: AppTheme.backgroundDark.withValues(alpha: 0.5),
                   ),
-                  child: _primaryVehicle!.imageUrl.isNotEmpty
+                  child: _primaryVehicle!.imageUrl.isNotEmpty && _getProfileImageProvider(_primaryVehicle!.imageUrl) != null
                       ? ClipRRect(
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(28),
                           ),
-                          child: CachedNetworkImage(
-                            imageUrl: _primaryVehicle!.imageUrl,
+                          child: Image(
+                            image: _getProfileImageProvider(_primaryVehicle!.imageUrl)!,
                             fit: BoxFit.cover,
-                            errorWidget: (context, url, error) =>
+                            errorBuilder: (context, error, stackTrace) =>
                                 _buildPlaceholderCar(),
                           ),
                         )

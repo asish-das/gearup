@@ -9,9 +9,10 @@ import 'service_centers_view.dart';
 import 'bookings_manager_view.dart';
 import 'vehicle_owners_view.dart';
 import 'admin_management_view.dart';
-import 'system_settings_view.dart';
 import 'payments_view.dart';
 import 'reports_view.dart';
+import 'ai_config_view.dart';
+import 'inventory_manager_view.dart';
 
 class AdminScaffold extends StatefulWidget {
   const AdminScaffold({super.key});
@@ -75,9 +76,9 @@ class _AdminScaffoldState extends State<AdminScaffold> {
     const BookingsManagerView(),
     const PaymentsView(),
     const ReportsView(),
-    const Center(child: Text('AI Configuration placeholder')),
+    const AIConfigView(),
+    const InventoryManagerView(),
     const AdminManagementView(),
-    const SystemSettingsView(),
   ];
 
   @override
@@ -371,16 +372,16 @@ class _AdminScaffoldState extends State<AdminScaffold> {
               const SizedBox(height: 6),
               _buildNavItem(
                 7,
-                'Staff',
-                Icons.admin_panel_settings_outlined,
+                'Supermarket',
+                Icons.inventory_2_outlined,
                 isCollapsed,
                 isMobileDrawer,
               ),
               const SizedBox(height: 6),
               _buildNavItem(
                 8,
-                'Settings',
-                Icons.settings_outlined,
+                'Staff',
+                Icons.admin_panel_settings_outlined,
                 isCollapsed,
                 isMobileDrawer,
               ),

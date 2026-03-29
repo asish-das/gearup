@@ -11,6 +11,7 @@ import 'customers_view.dart';
 import 'revenue_view.dart';
 import 'my_services_view.dart';
 import 'profile_view.dart';
+import 'service_inventory_view.dart';
 
 class ServiceScaffold extends StatefulWidget {
   const ServiceScaffold({super.key});
@@ -65,6 +66,7 @@ class _ServiceScaffoldState extends State<ServiceScaffold> {
     const CustomersView(),
     const RevenueView(),
     const MyServicesView(),
+    const ServiceInventoryView(),
     const ProfileView(),
   ];
 
@@ -163,13 +165,19 @@ class _ServiceScaffoldState extends State<ServiceScaffold> {
                         4,
                         'My Services',
                         Icons.miscellaneous_services,
-                      ), // Original index 4
+                      ),
                       const SizedBox(height: 8),
                       _buildNavItem(
                         5,
+                        'Spare Parts',
+                        Icons.inventory_2_outlined,
+                      ),
+                      const SizedBox(height: 8),
+                      _buildNavItem(
+                        6,
                         'Profile & Settings',
                         Icons.person_outline,
-                      ), // Changed from 'Settings' to 'Profile & Settings' and icon
+                      ),
                     ],
                   ),
                 ),
