@@ -34,6 +34,8 @@ class User {
   final String? createdAt;
   final String? address;
   final String? description;
+  final double? rating;
+  final int? reviewsCount;
 
   User({
     required this.uid,
@@ -47,6 +49,8 @@ class User {
     this.createdAt,
     this.address,
     this.description,
+    this.rating,
+    this.reviewsCount,
   });
 
   static String? _parseDate(dynamic value) {
@@ -69,6 +73,8 @@ class User {
       createdAt: _parseDate(map['createdAt']),
       address: map['address'],
       description: map['description'],
+      rating: map['rating'] != null ? (map['rating'] as num).toDouble() : null,
+      reviewsCount: map['reviewsCount'] != null ? (map['reviewsCount'] as num).toInt() : null,
     );
   }
 
@@ -85,6 +91,8 @@ class User {
       'createdAt': createdAt,
       'address': address,
       'description': description,
+      'rating': rating,
+      'reviewsCount': reviewsCount,
     };
   }
 }

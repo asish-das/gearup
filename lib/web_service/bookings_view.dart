@@ -24,6 +24,8 @@ class BookingData {
   final String paymentMethod;
   final String? deliveryOption;
   final DateTime createdAt;
+  final double? rating;
+  final String? reviewText;
 
   BookingData({
     required this.id,
@@ -41,6 +43,8 @@ class BookingData {
     this.deliveryOption,
     this.vehicleId = '',
     required this.createdAt,
+    this.rating,
+    this.reviewText,
   });
 
   factory BookingData.fromMap(Map<String, dynamic> map, String docId) {
@@ -66,6 +70,8 @@ class BookingData {
           : (map['appointmentDate'] != null
                 ? (map['appointmentDate'] as Timestamp).toDate()
                 : DateTime.now()),
+      rating: (map['rating'] as num?)?.toDouble(),
+      reviewText: map['reviewText'] as String?,
     );
   }
 }
@@ -496,48 +502,300 @@ class _BookingsViewState extends State<BookingsView> {
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Header(
-                level: 0,
-                child: pw.Text(
-                  'Service Receipt',
-                  style: pw.TextStyle(
-                    fontSize: 24,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-              ),
-              pw.SizedBox(height: 20),
-              pw.Text('Booking ID: ${booking.id}'),
-              pw.Text('Customer Name: $realCustomerName'),
-              pw.Text('Contact: ${booking.contact}'),
-              pw.Text('Vehicle: ${booking.vehicle}'),
-              pw.Text('Service: ${booking.service}'),
-              pw.Text('Payment Method: ${booking.paymentMethod}'),
-              pw.Text('Payment Status: ${booking.paymentStatus}'),
-              pw.SizedBox(height: 20),
-              pw.Divider(),
+              // Header
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(
-                    'Total Amount:',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'GEARUP',
+                        style: pw.TextStyle(
+                          fontSize: 28,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.blue900,
+                        ),
+                      ),
+                      pw.Text(
+                        'SERVICE & DETAILING CENTER',
+                        style: pw.TextStyle(
+                          fontSize: 12,
+                          color: PdfColors.grey700,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ],
                   ),
-                  pw.Text(
-                    '\$${booking.amount.toStringAsFixed(2)}',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text(
+                        'RECEIPT',
+                        style: pw.TextStyle(
+                          fontSize: 24,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey800,
+                        ),
+                      ),
+                      pw.Text(
+                        '#${booking.id.toUpperCase().substring(0, 8)}',
+                        style: pw.TextStyle(
+                          fontSize: 12,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
+
+              pw.SizedBox(height: 40),
+              pw.Divider(thickness: 2, color: PdfColors.blue800),
               pw.SizedBox(height: 20),
-              pw.Text(
-                'Completed On: ${DateFormat('MMM dd, yyyy').format(DateTime.now())}',
+
+              // Status Badge
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: pw.BoxDecoration(
+                  color: booking.paymentStatus == 'PAID' 
+                    ? PdfColors.green100 
+                    : PdfColors.orange100,
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                ),
+                child: pw.Text(
+                  booking.paymentStatus,
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                    color: booking.paymentStatus == 'PAID' 
+                      ? PdfColors.green800 
+                      : PdfColors.orange800,
+                  ),
+                ),
               ),
+
               pw.SizedBox(height: 30),
+
+              // Customer & Vehicle Info
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'BILL TO:',
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
+                        pw.SizedBox(height: 8),
+                        pw.Text(
+                          realCustomerName,
+                          style: pw.TextStyle(
+                            fontSize: 14,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.Text(
+                          booking.contact,
+                          style: pw.TextStyle(
+                            fontSize: 12,
+                            color: PdfColors.grey700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'VEHICLE DETAILS:',
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
+                        pw.SizedBox(height: 8),
+                        pw.Text(
+                          booking.vehicle,
+                          style: pw.TextStyle(
+                            fontSize: 14,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.Text(
+                          'Appointment: ${DateFormat('MMM dd, yyyy').format(booking.appointmentDate)}',
+                          style: pw.TextStyle(
+                            fontSize: 12,
+                            color: PdfColors.grey700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              pw.SizedBox(height: 40),
+
+              // Items Table Header
+              pw.Container(
+                decoration: const pw.BoxDecoration(
+                  color: PdfColors.blue800,
+                  borderRadius: pw.BorderRadius.all(pw.Radius.circular(4)),
+                ),
+                padding: const pw.EdgeInsets.all(12),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'SERVICE DESCRIPTION',
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                    pw.Text(
+                      'TOTAL',
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Table Item
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(12),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          booking.service,
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          'Professional ${booking.service} with detailed inspection',
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            color: PdfColors.grey600,
+                            fontStyle: pw.FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ),
+                    pw.Text(
+                      '\$${booking.amount.toStringAsFixed(2)}',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              pw.Spacer(),
+
+              // Summary
+              pw.Divider(thickness: 1, color: PdfColors.grey300),
+              pw.SizedBox(height: 10),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Row(
+                        children: [
+                          pw.Text(
+                            'Grand Total: ',
+                            style: pw.TextStyle(
+                              fontSize: 16,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                          pw.SizedBox(width: 20),
+                          pw.Text(
+                            '\$${booking.amount.toStringAsFixed(2)}',
+                            style: pw.TextStyle(
+                              fontSize: 18,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.blue800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      pw.SizedBox(height: 10),
+                      pw.Text(
+                        'Paid via ${booking.paymentMethod}',
+                        style: pw.TextStyle(
+                          fontSize: 10,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+
+              pw.SizedBox(height: 50),
+
+              // Footer
+              pw.Center(
+                child: pw.Column(
+                  children: [
+                    pw.Text(
+                      'Thank you for choosing GearUp!',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      'For any queries, please contact our support at support@gearup.com',
+                      style: pw.TextStyle(
+                        fontSize: 9,
+                        color: PdfColors.grey500,
+                      ),
+                    ),
+                    pw.SizedBox(height: 20),
+                    pw.Text(
+                      'Generated on: ${DateFormat('MMM dd, yyyy • HH:mm').format(DateTime.now())}',
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        color: PdfColors.grey400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           );
         },
@@ -1070,6 +1328,8 @@ class _BookingsViewState extends State<BookingsView> {
                               'appointmentDate': Timestamp.fromDate(
                                 bookingDate,
                               ),
+                              'dateString': DateFormat('yyyy-MM-dd').format(selectedDate),
+                              'time': selectedTime.format(context),
                               'createdAt': FieldValue.serverTimestamp(),
                               'status': 'PENDING',
                               'amount': 0.0,
@@ -1219,9 +1479,13 @@ class _BookingsViewState extends State<BookingsView> {
             );
           }).toList();
 
-          // Sort bookings: Primary - appointmentDate (DESC) for timeline order
+          // Sort bookings: Primary - appointmentDate (ASC) for chronological workflow
           bookings.sort((a, b) {
-            return b.appointmentDate.compareTo(a.appointmentDate);
+            int cmp = a.appointmentDate.compareTo(b.appointmentDate);
+            if (cmp == 0) {
+              return b.createdAt.compareTo(a.createdAt); // Secondary: Newest request first
+            }
+            return cmp;
           });
         }
 
@@ -1772,6 +2036,40 @@ class _BookingsViewState extends State<BookingsView> {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
+                            if (booking.rating != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Row(
+                                    children: List.generate(5, (index) {
+                                      return Icon(
+                                        index < booking.rating!
+                                            ? Icons.star
+                                            : Icons.star_border,
+                                        color: Colors.amber,
+                                        size: 16,
+                                      );
+                                    }),
+                                  ),
+                                  if (booking.reviewText != null &&
+                                      booking.reviewText!.isNotEmpty) ...[
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '"${booking.reviewText}"',
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 12,
+                                          fontStyle: FontStyle.italic,
+                                          color: const Color(0xFF64748B),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),

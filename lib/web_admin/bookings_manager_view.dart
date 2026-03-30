@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import '../services/export_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:universal_html/html.dart' as html;
-import 'dart:convert';
 
 class BookingsManagerView extends StatefulWidget {
   const BookingsManagerView({super.key});
@@ -301,6 +300,9 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
                                             statusColor = Colors.teal;
                                           }
 
+                                          double? rating = (data['rating'] as num?)?.toDouble();
+                                          String? review = data['reviewText'] as String?;
+
                                           return _buildTableRow(
                                             '#$id',
                                             customer,
@@ -311,6 +313,8 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
                                             payment,
                                             amountStr,
                                             statusColor,
+                                            rating: rating,
+                                            review: review,
                                           );
                                         },
                                       );
@@ -411,7 +415,7 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
       ),
       if (isMobile) const SizedBox(height: 12) else const SizedBox(width: 16),
       InkWell(
-        onTap: _exportBookingsToCSV,
+        onTap: _exportBookingsToPDF,
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -430,10 +434,10 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.file_download, color: Colors.white, size: 20),
+              const Icon(Icons.picture_as_pdf_outlined, color: Colors.white, size: 20),
               const SizedBox(width: 8),
               Text(
-                'Export',
+                'Export PDF',
                 style: GoogleFonts.manrope(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -462,13 +466,76 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
       initialDateRange: _selectedDateRange,
       firstDate: DateTime(2020),
       lastDate: DateTime(DateTime.now().year + 2),
+      initialEntryMode: DatePickerEntryMode.calendar,
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
+          data: ThemeData.light(useMaterial3: true).copyWith(
             colorScheme: const ColorScheme.light(
               primary: Color(0xFF5D40D4),
               onPrimary: Colors.white,
+              surface: Colors.white,
               onSurface: Color(0xFF0F172A),
+              secondary: Color(0xFF818CF8),
+            ),
+            dialogTheme: DialogThemeData(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+              elevation: 24,
+            ),
+            textTheme: GoogleFonts.manropeTextTheme().copyWith(
+              labelLarge: GoogleFonts.manrope(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: const Color(0xFF5D40D4).withValues(alpha: 0.05),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF5D40D4), width: 2),
+              ),
+              labelStyle: GoogleFonts.manrope(
+                color: const Color(0xFF5D40D4),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            datePickerTheme: DatePickerThemeData(
+              headerBackgroundColor: const Color(0xFF5D40D4),
+              headerForegroundColor: Colors.white,
+              headerHeadlineStyle: GoogleFonts.manrope(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              dayStyle: GoogleFonts.manrope(fontWeight: FontWeight.w500),
+              rangeSelectionBackgroundColor: const Color(0xFF5D40D4).withValues(alpha: 0.15),
+              rangePickerHeaderBackgroundColor: const Color(0xFF5D40D4),
+              rangePickerHeaderForegroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF5D40D4),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                textStyle: GoogleFonts.manrope(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ),
           ),
           child: child!,
@@ -483,8 +550,7 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
     }
   }
 
-  Future<void> _exportBookingsToCSV() async {
-    // We'll use the current stream data if possible, but let's fetch once for the export
+  Future<void> _exportBookingsToPDF() async {
     try {
       final snapshot = await FirebaseFirestore.instance.collection('bookings').get();
       final docs = _filterBookings(snapshot.docs);
@@ -498,13 +564,12 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
         return;
       }
 
-      String csvData = 'Booking ID,Customer,Service Center,Service Type,Status,Date,Payment,Amount\n';
-      for (var doc in docs) {
+      final List<String> headers = ['Booking ID', 'Customer', 'Service', 'Status', 'Date', 'Amount'];
+      final List<List<String>> data = docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        String id = doc.id.toUpperCase();
-        String customer = (data['name'] ?? data['customerName'] ?? 'N/A').toString().replaceAll(',', '');
-        String center = (data['serviceCenterName'] ?? 'N/A').toString().replaceAll(',', '');
-        String type = (data['service'] ?? 'N/A').toString().replaceAll(',', '');
+        String id = doc.id.substring(doc.id.length > 6 ? doc.id.length - 6 : 0).toUpperCase();
+        String customer = (data['name'] ?? data['customerName'] ?? 'N/A').toString();
+        String type = (data['service'] ?? 'N/A').toString();
         String status = (data['status'] ?? 'PENDING').toString();
         
         DateTime? dt;
@@ -514,30 +579,33 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
           dt = DateTime.tryParse(data['date'].toString());
         }
         String dateStr = dt != null ? DateFormat('yyyy-MM-dd').format(dt) : 'N/A';
-        
-        String payment = (status.toUpperCase() == 'COMPLETED' ? 'Paid' : 'Pending');
-        String amount = data['amount']?.toString() ?? data['totalAmount']?.toString() ?? '0.00';
+        String amount = 'Rs. ${data['amount']?.toString() ?? '0.00'}';
 
-        csvData += '$id,$customer,$center,$type,$status,$dateStr,$payment,$amount\n';
-      }
+        return [id, customer, type, status, dateStr, amount];
+      }).toList();
 
-      final bytes = utf8.encode(csvData);
-      final blob = html.Blob([bytes], 'text/csv');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      html.AnchorElement(href: url)
-        ..setAttribute('download', 'bookings_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv')
-        ..click();
-      html.Url.revokeObjectUrl(url);
+      final result = await ExportService.exportGenericToPDF(
+        title: 'Bookings Report',
+        headers: headers,
+        data: data,
+        fileNamePrefix: 'bookings_report',
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bookings exported successfully.')),
+          SnackBar(
+            content: Text('Bookings report exported successfully: $result'),
+            backgroundColor: const Color(0xFF5D40D4),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
+          SnackBar(
+            content: Text('PDF Export failed: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -615,6 +683,7 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
             child: Text('PAYMENT STATUS', style: _headerStyle()),
           ),
           Expanded(flex: 2, child: Text('AMOUNT', style: _headerStyle())),
+          Expanded(flex: 2, child: Text('RATING', style: _headerStyle())),
           const SizedBox(width: 32),
         ],
       ),
@@ -668,8 +737,10 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
     String date,
     String payment,
     String amount,
-    MaterialColor statusColor,
-  ) {
+    MaterialColor statusColor, {
+    double? rating,
+    String? review,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       decoration: const BoxDecoration(
@@ -690,23 +761,13 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
           ),
           Expanded(
             flex: 3,
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: Color(0xFFF1F5F9),
-                  radius: 16,
-                  child: Icon(Icons.person, color: Color(0xFF94A3B8), size: 16),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  customer,
-                  style: GoogleFonts.manrope(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F172A),
-                  ),
-                ),
-              ],
+            child: Text(
+              customer,
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1E293B),
+              ),
             ),
           ),
           Expanded(
@@ -715,8 +776,7 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
               center,
               style: GoogleFonts.manrope(
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF64748B),
+                color: const Color(0xFF1E293B),
               ),
             ),
           ),
@@ -726,33 +786,26 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
               type,
               style: GoogleFonts.manrope(
                 fontSize: 14,
-                color: const Color(0xFF64748B),
+                color: const Color(0xFF1E293B),
               ),
             ),
           ),
           Expanded(
             flex: 2,
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    status,
-                    style: GoogleFonts.manrope(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: statusColor.shade700,
-                    ),
-                  ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                status,
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: statusColor.shade700,
                 ),
-              ],
+              ),
             ),
           ),
           Expanded(
@@ -760,35 +813,19 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
             child: Text(
               date,
               style: GoogleFonts.manrope(
-                fontSize: 14,
+                fontSize: 13,
                 color: const Color(0xFF64748B),
               ),
             ),
           ),
           Expanded(
             flex: 2,
-            child: Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: payment == 'Paid'
-                        ? Colors.green
-                        : (payment == 'Refunded' ? Colors.red : Colors.grey),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  payment,
-                  style: GoogleFonts.manrope(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
-              ],
+            child: Text(
+              payment,
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                color: const Color(0xFF64748B),
+              ),
             ),
           ),
           Expanded(
@@ -798,11 +835,49 @@ class _BookingsManagerViewState extends State<BookingsManagerView> {
               style: GoogleFonts.manrope(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF0F172A),
+                color: const Color(0xFF1E293B),
               ),
             ),
           ),
-          const Icon(Icons.more_vert, color: Color(0xFF94A3B8)),
+          Expanded(
+            flex: 2,
+            child: rating != null
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: List.generate(5, (index) {
+                          return Icon(
+                            index < rating ? Icons.star : Icons.star_border,
+                            color: Colors.amber,
+                            size: 14,
+                          );
+                        }),
+                      ),
+                      if (review != null && review.isNotEmpty)
+                        Tooltip(
+                          message: review,
+                          child: Text(
+                            review,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.manrope(
+                              fontSize: 10,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ),
+                    ],
+                  )
+                : Text(
+                    'No Rating',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 32),
         ],
       ),
     );

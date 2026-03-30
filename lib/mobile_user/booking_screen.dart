@@ -397,7 +397,7 @@ class _BookingScreenState extends State<BookingScreen> {
                         final int configStatus = slot['status'] ?? 0;
                         final bool isTimePast = _isTimeInPast(time);
                         final bool isUnavailable =
-                            configStatus != 0 ||
+                            configStatus == 2 ||
                             _bookedTimes.contains(time) ||
                             isTimePast;
                         final isSelected = _selectedTime == time;

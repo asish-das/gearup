@@ -201,16 +201,18 @@ class _DashboardViewState extends State<DashboardView> {
             if (status == 'COMPLETED') totalRevenue += amount;
           }
 
-          // Sort and take latest 5 for the table
+          // Sort and take latest 5 for the table by appointmentDate DESC
           final sortedDocs = docs.toList()
             ..sort((a, b) {
-              final aDate =
-                  (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
-              final bDate =
-                  (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
-              return (bDate ?? Timestamp.now()).compareTo(
-                aDate ?? Timestamp.now(),
-              );
+              final aData = a.data() as Map<String, dynamic>;
+              final bData = b.data() as Map<String, dynamic>;
+              final aDate = (aData['appointmentDate'] as Timestamp?)?.toDate() ??
+                  (aData['createdAt'] as Timestamp?)?.toDate() ??
+                  DateTime(2000);
+              final bDate = (bData['appointmentDate'] as Timestamp?)?.toDate() ??
+                  (bData['createdAt'] as Timestamp?)?.toDate() ??
+                  DateTime(2000);
+              return bDate.compareTo(aDate);
             });
 
           recentBookings = sortedDocs.take(5).map((doc) {

@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -64,6 +66,51 @@ class _HomeDashboardState extends State<HomeDashboard> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _pickVehicleImage(Vehicle vehicle) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? imageFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 70,
+      );
+      if (imageFile != null) {
+        setState(() {
+          _isLoading = true;
+        });
+        
+        final File image = File(imageFile.path);
+        final bytes = await image.readAsBytes();
+        final base64Image = "data:image/jpeg;base64,${base64Encode(bytes)}";
+
+        await VehicleService.updateVehicle(vehicle.id, {
+          'imageUrl': base64Image,
+        });
+
+        await _loadUserData(); // Reload list
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vehicle image updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking vehicle image: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -493,28 +540,67 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ),
             Column(
               children: [
-                Container(
-                  height: 160,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(28),
+                GestureDetector(
+                  onTap: () => _pickVehicleImage(_primaryVehicle!),
+                  child: Container(
+                    height: 160,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(28),
+                      ),
+                      color: AppTheme.backgroundDark.withValues(alpha: 0.5),
                     ),
-                    color: AppTheme.backgroundDark.withValues(alpha: 0.5),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: _primaryVehicle!.imageUrl.isNotEmpty &&
+                                  _getProfileImageProvider(
+                                        _primaryVehicle!.imageUrl,
+                                      ) !=
+                                      null
+                              ? ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(28),
+                                  ),
+                                  child: Image(
+                                    image: _getProfileImageProvider(
+                                      _primaryVehicle!.imageUrl,
+                                    )!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            _buildPlaceholderCar(),
+                                  ),
+                                )
+                              : _buildPlaceholderCar(),
+                        ),
+                        Positioned(
+                          bottom: 12,
+                          right: 12,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: _primaryVehicle!.imageUrl.isNotEmpty && _getProfileImageProvider(_primaryVehicle!.imageUrl) != null
-                      ? ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(28),
-                          ),
-                          child: Image(
-                            image: _getProfileImageProvider(_primaryVehicle!.imageUrl)!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                _buildPlaceholderCar(),
-                          ),
-                        )
-                      : _buildPlaceholderCar(),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(20),
@@ -581,6 +667,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             _buildDetailItem('Year', _primaryVehicle!.year),
                             _buildDetailVerticalDivider(),
                             _buildDetailItem('Color', _primaryVehicle!.color),
+                            _buildDetailVerticalDivider(),
+                            _buildDetailItem('Mileage', '${_primaryVehicle!.kilometers}'),
                           ],
                         ),
                       ),
@@ -751,7 +839,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       const SizedBox(height: 16),
                       _buildThemedTextField(
                         controller: kmController,
-                        label: 'Current Kilometers',
+                        label: 'Mileage',
                         hint: 'e.g., 12000',
                         icon: Icons.speed,
                         keyboardType: TextInputType.number,

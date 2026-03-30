@@ -12,6 +12,16 @@ class ServiceCentersScreen extends StatefulWidget {
 }
 
 class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _selectedFilter = 'Nearest'; // Nearest, Rating, Popular, Open Now
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -26,12 +36,31 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
         ),
         centerTitle: true,
         automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white70),
-            onPressed: () {},
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppTheme.surface.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _searchQuery = value),
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'Search service centers...',
+                  hintStyle: TextStyle(color: Colors.white38),
+                  prefixIcon: Icon(Icons.search, color: Colors.white38),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
           ),
-        ],
+        ),
       ),
       body: Column(
         children: [
@@ -41,13 +70,13 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                _buildFilterButton('Nearest', isSelected: true),
+                _buildFilterButton('Nearest', isSelected: _selectedFilter == 'Nearest'),
                 const SizedBox(width: 12),
-                _buildFilterButton('Rating'),
+                _buildFilterButton('Rating', isSelected: _selectedFilter == 'Rating'),
                 const SizedBox(width: 12),
-                _buildFilterButton('Open Now'),
+                _buildFilterButton('Popular', isSelected: _selectedFilter == 'Popular'),
                 const SizedBox(width: 12),
-                _buildFilterButton('Price'),
+                _buildFilterButton('Open Now', isSelected: _selectedFilter == 'Open Now'),
               ],
             ),
           ),
@@ -78,13 +107,42 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
                 final allDocs = snapshot.data?.docs ?? [];
                 // Filtering in memory so we don't need composite indexes until ready
                 // and to allow 'pending' or 'active' for easy testing.
-                final centers = allDocs.where((doc) {
+                var centers = allDocs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final status = data['status']?.toString().toLowerCase();
-                  return status == 'approved' ||
+                  final name =
+                      (data['businessName'] ?? data['name'] ?? '')
+                          .toString()
+                          .toLowerCase();
+
+                  final matchesStatus =
+                      status == 'approved' ||
                       status == 'active' ||
                       status == 'pending';
+                  final matchesSearch =
+                      name.contains(_searchQuery.toLowerCase());
+
+                  return matchesStatus && matchesSearch;
                 }).toList();
+
+                // Sort logic
+                if (_selectedFilter == 'Rating') {
+                  centers.sort((a, b) {
+                    final aData = a.data() as Map<String, dynamic>;
+                    final bData = b.data() as Map<String, dynamic>;
+                    final aRating = (aData['rating'] as num?)?.toDouble() ?? 0.0;
+                    final bRating = (bData['rating'] as num?)?.toDouble() ?? 0.0;
+                    return bRating.compareTo(aRating);
+                  });
+                } else if (_selectedFilter == 'Popular') {
+                  centers.sort((a, b) {
+                    final aData = a.data() as Map<String, dynamic>;
+                    final bData = b.data() as Map<String, dynamic>;
+                    final aCount = (aData['reviewsCount'] as num?)?.toInt() ?? 0;
+                    final bCount = (bData['reviewsCount'] as num?)?.toInt() ?? 0;
+                    return bCount.compareTo(aCount);
+                  });
+                }
 
                 if (centers.isEmpty) {
                   return const Center(
@@ -118,7 +176,9 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
                             data['description']?.toString().isNotEmpty == true
                             ? data['description']
                             : 'Professional vehicle maintenance and repair services.',
-                        rating: (data['rating'] ?? 4.8).toString(),
+                        rating: data['rating'] != null 
+                            ? (data['rating'] as num).toDouble().toStringAsFixed(1)
+                            : 'New',
                         imageUrl:
                             data['profileImageUrl']?.toString().isNotEmpty ==
                                 true
@@ -140,35 +200,39 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
   }
 
   Widget _buildFilterButton(String label, {bool isSelected = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? AppTheme.primary
-            : AppTheme.surface.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: isSelected
-            ? null
-            : Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.white : Colors.white70,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
+    return InkWell(
+      onTap: () => setState(() => _selectedFilter = label),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.primary
+              : AppTheme.surface.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected
+              ? null
+              : Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.white70,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
             ),
-          ),
-          const SizedBox(width: 4),
-          Icon(
-            Icons.expand_more,
-            color: isSelected ? Colors.white : Colors.white70,
-            size: 16,
-          ),
-        ],
+            const SizedBox(width: 4),
+            Icon(
+              Icons.expand_more,
+              color: isSelected ? Colors.white : Colors.white70,
+              size: 16,
+            ),
+          ],
+        ),
       ),
     );
   }

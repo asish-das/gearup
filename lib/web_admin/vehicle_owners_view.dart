@@ -124,191 +124,31 @@ class _VehicleOwnersViewState extends State<VehicleOwnersView> {
         );
   }
 
-  void _showExportDialog() {
+  Future<void> _exportToPDF() async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text(
-            'Export Data',
-            style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+    try {
+      String result = await ExportService.exportToPDF(_users, _vehicles);
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Report exported successfully: $result',
+            style: GoogleFonts.manrope(color: Colors.white),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Choose export format:', style: GoogleFonts.manrope()),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
-                title: Text('PDF Document', style: GoogleFonts.manrope()),
-                onTap: () async {
-                  Navigator.of(dialogContext).pop();
-                  try {
-                    String filePath = await ExportService.exportToPDF(
-                      _users,
-                      _vehicles,
-                    );
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'PDF exported successfully!',
-                              style: GoogleFonts.manrope(color: Colors.white),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Saved to: $filePath',
-                              style: GoogleFonts.manrope(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                        backgroundColor: Colors.green,
-                        duration: const Duration(seconds: 4),
-                        action: SnackBarAction(
-                          label: 'OK',
-                          textColor: Colors.white,
-                          onPressed: () {},
-                        ),
-                      ),
-                    );
-                  } catch (e) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Failed to export PDF: $e',
-                          style: GoogleFonts.manrope(),
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.table_chart, color: Colors.green),
-                title: Text('CSV File', style: GoogleFonts.manrope()),
-                onTap: () async {
-                  Navigator.of(dialogContext).pop();
-                  try {
-                    String filePath = await ExportService.exportToCSV(
-                      _users,
-                      _vehicles,
-                    );
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'CSV exported successfully!',
-                              style: GoogleFonts.manrope(color: Colors.white),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Saved to: $filePath',
-                              style: GoogleFonts.manrope(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                        backgroundColor: Colors.green,
-                        duration: const Duration(seconds: 4),
-                        action: SnackBarAction(
-                          label: 'OK',
-                          textColor: Colors.white,
-                          onPressed: () {},
-                        ),
-                      ),
-                    );
-                  } catch (e) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Failed to export CSV: $e',
-                          style: GoogleFonts.manrope(),
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.text_snippet, color: Colors.blue),
-                title: Text('Text File', style: GoogleFonts.manrope()),
-                onTap: () async {
-                  Navigator.of(dialogContext).pop();
-                  try {
-                    String filePath = await ExportService.exportToText(
-                      _users,
-                      _vehicles,
-                    );
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Text file exported successfully!',
-                              style: GoogleFonts.manrope(color: Colors.white),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Saved to: $filePath',
-                              style: GoogleFonts.manrope(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                        backgroundColor: Colors.green,
-                        duration: const Duration(seconds: 4),
-                        action: SnackBarAction(
-                          label: 'OK',
-                          textColor: Colors.white,
-                          onPressed: () {},
-                        ),
-                      ),
-                    );
-                  } catch (e) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Failed to export Text: $e',
-                          style: GoogleFonts.manrope(),
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-              ),
-            ],
+          backgroundColor: const Color(0xFF5D40D4),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to export report: $e',
+            style: GoogleFonts.manrope(),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.manrope(color: const Color(0xFF5D40D4)),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -732,7 +572,7 @@ class _VehicleOwnersViewState extends State<VehicleOwnersView> {
 
   Widget _buildExportButton() {
     return GestureDetector(
-      onTap: _showExportDialog,
+      onTap: _exportToPDF,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
@@ -1546,26 +1386,107 @@ class _VehicleOwnersViewState extends State<VehicleOwnersView> {
           ),
           Expanded(
             flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'No recent bookings',
-                  style: GoogleFonts.manrope(
-                    fontSize: 14,
-                    color: const Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'N/A',
-                  style: GoogleFonts.manrope(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                ),
-              ],
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('bookings')
+                  .where('userId', isEqualTo: user.uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Text(
+                    'Error loading',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: Colors.red[300],
+                    ),
+                  );
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Text(
+                    'Loading...',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                  // Sort in memory to avoid index requirements
+                  final docs = snapshot.data!.docs.toList();
+                  docs.sort((a, b) {
+                    final aData = a.data() as Map<String, dynamic>;
+                    final bData = b.data() as Map<String, dynamic>;
+                    final aDate =
+                        (aData['appointmentDate'] as Timestamp?)?.toDate() ??
+                        DateTime.fromMillisecondsSinceEpoch(0);
+                    final bDate =
+                        (bData['appointmentDate'] as Timestamp?)?.toDate() ??
+                        DateTime.fromMillisecondsSinceEpoch(0);
+                    return bDate.compareTo(aDate);
+                  });
+
+                  final bookingDoc = docs.first;
+                  final bookingData =
+                      bookingDoc.data() as Map<String, dynamic>;
+                  final serviceName =
+                      bookingData['service'] ?? 'General Service';
+                  final date =
+                      bookingData['appointmentDate'] != null
+                          ? DateFormat(
+                            'dd MMM yyyy',
+                          ).format((bookingData['appointmentDate'] as Timestamp).toDate())
+                          : 'N/A';
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        serviceName,
+                        style: GoogleFonts.manrope(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF0F172A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        date,
+                        style: GoogleFonts.manrope(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'No recent bookings',
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'N/A',
+                      style: GoogleFonts.manrope(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFCBD5E1),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           Expanded(

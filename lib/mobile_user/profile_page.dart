@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gearup/mobile_user/service_history.dart';
 import 'package:gearup/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:gearup/services/auth_service.dart';
@@ -11,7 +12,8 @@ import 'package:gearup/models/vehicle.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final Function(int)? onTabSelected;
+  const ProfilePage({super.key, this.onTabSelected});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -338,9 +340,21 @@ class _ProfilePageState extends State<ProfilePage> {
               Icons.history,
               'Service History',
               'View recent repairs',
+              onTap: () {
+                if (widget.onTabSelected != null) {
+                  widget.onTabSelected!(4);
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ServiceHistoryScreen(),
+                    ),
+                  );
+                }
+              },
             ),
             const SizedBox(height: 12),
-            _buildListTile(Icons.payments, 'Subscription', 'GearUp Gold Plan'),
+            _buildListTile(Icons.payments, 'Subscription', 'GearUp Gold Plan', onTap: () {}),
             const SizedBox(height: 40),
             OutlinedButton.icon(
               onPressed: () async {
@@ -371,8 +385,11 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildListTile(IconData icon, String title, String subtitle) {
-    return Container(
+  Widget _buildListTile(IconData icon, String title, String subtitle, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.surface.withValues(alpha: 0.4),
@@ -411,6 +428,7 @@ class _ProfilePageState extends State<ProfilePage> {
           const Icon(Icons.chevron_right, color: Colors.white54),
         ],
       ),
+    ),
     );
   }
 
@@ -644,6 +662,25 @@ class _ProfilePageState extends State<ProfilePage> {
                                   maxLines: 1,
                                 ),
                               ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.speed,
+                                    color: Colors.white70,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${vehicle.kilometers}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.white70,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
                               const SizedBox(height: 12),
                               // Status indicators removed as requested
                             ],
@@ -805,7 +842,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     _buildDetailRow(
                       Icons.speed,
                       'Mileage',
-                      '${vehicle.kilometers} KM',
+                      '${vehicle.kilometers}',
                     ),
                   ],
                 ),
@@ -886,6 +923,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final yearController = TextEditingController();
     final colorController = TextEditingController();
     final licensePlateController = TextEditingController();
+    final kilometersController = TextEditingController();
 
     showDialog(
       context: context,
@@ -991,6 +1029,14 @@ class _ProfilePageState extends State<ProfilePage> {
                         hint: 'e.g., ABC-1234',
                         icon: Icons.confirmation_number,
                       ),
+                      const SizedBox(height: 16),
+                      _buildThemedTextField(
+                        controller: kilometersController,
+                        label: 'Mileage',
+                        hint: 'e.g., 1000',
+                        icon: Icons.speed,
+                        keyboardType: TextInputType.number,
+                      ),
                     ],
                   ),
                 ),
@@ -1040,7 +1086,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 licensePlate: licensePlateController.text
                                     .trim(),
                                 userId: _currentUser!.uid,
-                                kilometers: 0,
+                                kilometers: int.tryParse(kilometersController.text.trim()) ?? 0,
                                 isConnected: true,
                               );
 
@@ -1185,6 +1231,9 @@ class _ProfilePageState extends State<ProfilePage> {
     final licensePlateController = TextEditingController(
       text: vehicle.licensePlate,
     );
+    final kilometersController = TextEditingController(
+      text: vehicle.kilometers.toString(),
+    );
 
     showDialog(
       context: context,
@@ -1290,6 +1339,14 @@ class _ProfilePageState extends State<ProfilePage> {
                         hint: 'e.g., ABC-1234',
                         icon: Icons.confirmation_number,
                       ),
+                      const SizedBox(height: 16),
+                      _buildThemedTextField(
+                        controller: kilometersController,
+                        label: 'Mileage',
+                        hint: 'e.g., 5000',
+                        icon: Icons.speed,
+                        keyboardType: TextInputType.number,
+                      ),
                     ],
                   ),
                 ),
@@ -1337,7 +1394,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 licensePlate: licensePlateController.text
                                     .trim(),
                                 userId: vehicle.userId,
-                                kilometers: vehicle.kilometers,
+                                imageUrl: vehicle.imageUrl,
+                                kilometers: int.tryParse(kilometersController.text.trim()) ?? 0,
+                                lastServiceKm: vehicle.lastServiceKm,
                                 isConnected: vehicle.isConnected,
                               );
 

@@ -71,7 +71,9 @@ class _MainNavigationState extends State<MainNavigation> {
     const ServiceCentersScreen(),
     const ServiceTrackingScreen(),
     const ServiceHistoryScreen(),
-    const ProfilePage(),
+    ProfilePage(onTabSelected: (index) {
+      setState(() => _currentIndex = index);
+    }),
   ];
 
   @override

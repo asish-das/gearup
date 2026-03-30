@@ -139,7 +139,8 @@ class _ServiceHistoryScreenState extends State<ServiceHistoryScreen> {
       itemCount: docs.length,
       itemBuilder: (context, index) {
         final doc = docs[index];
-        final data = doc.data() as Map<String, dynamic>;
+        final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
+        data['id'] = doc.id; // Store document ID in the map for rating updates
 
         final title = data['service'] ?? 'General Service';
         final vehicle = data['vehicle'] ?? 'Unknown Vehicle';
@@ -280,6 +281,20 @@ class _ServiceHistoryScreenState extends State<ServiceHistoryScreen> {
                     '$date • $location',
                     style: const TextStyle(fontSize: 13, color: Colors.white54),
                   ),
+                  if (data['rating'] != null) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: List.generate(5, (index) {
+                        return Icon(
+                          index < (data['rating'] as num).toDouble()
+                              ? Icons.star
+                              : Icons.star_border,
+                          color: AppTheme.accent,
+                          size: 14,
+                        );
+                      }),
+                    ),
+                  ],
                   const SizedBox(height: 12),
 
                   // Service Card
@@ -384,6 +399,9 @@ class _ServiceHistoryScreenState extends State<ServiceHistoryScreen> {
     showDialog(
       context: context,
       builder: (context) {
+        double selectedRating = 0;
+        final reviewController = TextEditingController();
+        
         return Dialog(
           backgroundColor: AppTheme.backgroundDark,
           shape: RoundedRectangleBorder(
@@ -398,56 +416,315 @@ class _ServiceHistoryScreenState extends State<ServiceHistoryScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Receipt',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'RECEIPT',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        Text(
+                          'GEARUP SERVICE',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppTheme.accent.withValues(alpha: 0.8),
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white54),
-                      onPressed: () => Navigator.pop(context),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.receipt_long,
+                        color: AppTheme.accent,
+                        size: 28,
+                      ),
                     ),
                   ],
                 ),
-                const Divider(color: Colors.white24),
-                const SizedBox(height: 12),
+                const SizedBox(height: 24),
+                // Dotted Divider
+                Row(
+                  children: List.generate(
+                    20,
+                    (index) => Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        height: 1,
+                        color: Colors.white24,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
                 _receiptRow('Service', title),
                 _receiptRow('Vehicle', subtitle),
                 _receiptRow('Center', location),
                 _receiptRow('Date', date),
-                const SizedBox(height: 16),
-                const Divider(color: Colors.white24),
-                const SizedBox(height: 16),
+                if (data['paymentMethod'] != null)
+                  _receiptRow('Paid Via', data['paymentMethod'] ?? 'N/A'),
+                const SizedBox(height: 24),
+                // Dotted Divider
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      data['paymentStatus'] == 'REFUNDED'
-                          ? 'Total Refunded'
-                          : 'Total Paid',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                  children: List.generate(
+                    20,
+                    (index) => Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        height: 1,
+                        color: Colors.white24,
                       ),
                     ),
-                    Text(
-                      price,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: data['paymentStatus'] == 'REFUNDED'
-                            ? Colors.red
-                            : AppTheme.accent,
-                        decoration: data['paymentStatus'] == 'REFUNDED'
-                            ? TextDecoration.lineThrough
-                            : null,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        data['paymentStatus'] == 'REFUNDED'
+                            ? 'REFUNDED'
+                            : 'TOTAL PAID',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white54,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      Text(
+                        price,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: data['paymentStatus'] == 'REFUNDED'
+                              ? Colors.red
+                              : AppTheme.accent,
+                          decoration: data['paymentStatus'] == 'REFUNDED'
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Rating Section
+                StatefulBuilder(
+                  builder: (context, setDialogState) {
+                    final currentRating = (data['rating'] as num?)?.toDouble();
+                    final isCompleted = data['status'] == 'COMPLETED';
+                    
+                    if (currentRating != null) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'YOUR RATING',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white54,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: List.generate(5, (index) {
+                              return Icon(
+                                index < currentRating ? Icons.star : Icons.star_border,
+                                color: AppTheme.accent,
+                                size: 20,
+                              );
+                            }),
+                          ),
+                          if (data['reviewText'] != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              data['reviewText'],
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.white70,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    } else if (isCompleted) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'RATE YOUR EXPERIENCE',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white54,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          StatefulBuilder(
+                            builder: (context, setStarState) {
+                              return Row(
+                                children: List.generate(5, (index) {
+                                  return IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: Icon(
+                                      index < selectedRating ? Icons.star : Icons.star_border,
+                                      color: AppTheme.accent,
+                                      size: 28,
+                                    ),
+                                    onPressed: () {
+                                      setStarState(() => selectedRating = index + 1.0);
+                                    },
+                                  );
+                                }),
+                              );
+                            }
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: reviewController,
+                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            decoration: InputDecoration(
+                              hintText: 'Add a comment (optional)',
+                              hintStyle: const TextStyle(color: Colors.white24),
+                              filled: true,
+                              fillColor: Colors.white.withValues(alpha: 0.05),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                if (selectedRating == 0) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please select a rating')),
+                                  );
+                                  return;
+                                }
+                                try {
+                                  final bookingId = data['id'] ?? data['bookingId'];
+                                  final serviceCenterId = data['serviceCenterId'];
+
+                                  await FirebaseFirestore.instance.runTransaction((transaction) async {
+                                    final bookingRef = FirebaseFirestore.instance.collection('bookings').doc(bookingId);
+                                    
+                                    // READ operations must come first
+                                    DocumentSnapshot? centerSnap;
+                                    DocumentReference? centerRef;
+                                    if (serviceCenterId != null) {
+                                      centerRef = FirebaseFirestore.instance.collection('users').doc(serviceCenterId.toString());
+                                      centerSnap = await transaction.get(centerRef);
+                                    }
+
+                                    // WRITE operations
+                                    transaction.update(bookingRef, {
+                                      'rating': selectedRating,
+                                      'reviewText': reviewController.text,
+                                      'ratedAt': FieldValue.serverTimestamp(),
+                                    });
+
+                                    if (centerSnap != null && centerSnap.exists) {
+                                      final centerData = centerSnap.data() as Map<String, dynamic>;
+                                      final currentRating = (centerData['rating'] as num?)?.toDouble() ?? 0.0;
+                                      final reviewsCount = (centerData['reviewsCount'] as num?)?.toInt() ?? 0;
+                                      
+                                      final newReviewsCount = reviewsCount + 1;
+                                      final newRating = ((currentRating * reviewsCount) + selectedRating) / newReviewsCount;
+                                      
+                                      transaction.update(centerRef!, {
+                                        'rating': newRating,
+                                        'reviewsCount': newReviewsCount,
+                                      });
+                                    }
+                                  });
+                                  
+                                  // Update local data for this dialog instance
+                                  data['rating'] = selectedRating;
+                                  data['reviewText'] = reviewController.text;
+                                  
+                                  setDialogState(() {});
+                                  
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Thank you for your rating!')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primary,
+                                foregroundColor: AppTheme.accent,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Text('SUBMIT REVIEW'),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }
+                ),
+                const SizedBox(height: 24),
+                Center(
+                  child: Text(
+                    'Thank you for your business!',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.1),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                  ],
+                    child: const Text('Close'),
+                  ),
                 ),
               ],
             ),

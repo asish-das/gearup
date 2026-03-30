@@ -217,7 +217,7 @@ class _ServiceCentersViewState extends State<ServiceCentersView> {
 
   Widget _buildExportButton() {
     return GestureDetector(
-      onTap: _showExportDialog,
+      onTap: _exportToPDF,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
@@ -245,158 +245,56 @@ class _ServiceCentersViewState extends State<ServiceCentersView> {
     );
   }
 
-  void _showExportDialog() {
+  Future<void> _exportToPDF() async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text(
-            'Export Data',
-            style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'serviceCenter')
+          .get();
+      
+      final List<String> headers = ['Center Name', 'Email', 'Phone', 'Business Name', 'Address', 'Status'];
+      final List<List<String>> data = snapshot.docs.map((doc) {
+        final userData = doc.data();
+        final user = User.fromMap({...userData, 'uid': doc.id});
+        
+        return [
+          user.name,
+          user.email,
+          user.phoneNumber ?? 'N/A',
+          user.businessName ?? 'N/A',
+          user.address ?? 'Not Provided',
+          (user.status ?? 'pending').toUpperCase(),
+        ];
+      }).toList();
+
+      String result = await ExportService.exportGenericToPDF(
+        title: 'Service Centers Report',
+        headers: headers,
+        data: data,
+        fileNamePrefix: 'service_centers_report',
+      );
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Report exported successfully: $result',
+            style: GoogleFonts.manrope(color: Colors.white),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Choose export format:', style: GoogleFonts.manrope()),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
-                title: Text('PDF Document', style: GoogleFonts.manrope()),
-                onTap: () async {
-                  Navigator.of(dialogContext).pop();
-                  try {
-                    final snapshot = await FirebaseFirestore.instance
-                        .collection('users')
-                        .where('role', isEqualTo: 'serviceCenter')
-                        .get();
-                    final usersList = snapshot.docs.map((doc) {
-                      var data = doc.data();
-                      data['uid'] = doc.id;
-                      return User.fromMap(data);
-                    }).toList();
-                    String filePath = await ExportService.exportToPDF(
-                      usersList,
-                      [],
-                    );
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'PDF exported successfully to $filePath',
-                          style: GoogleFonts.manrope(color: Colors.white),
-                        ),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  } catch (e) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Failed to export PDF: $e',
-                          style: GoogleFonts.manrope(),
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.table_chart, color: Colors.green),
-                title: Text('CSV File', style: GoogleFonts.manrope()),
-                onTap: () async {
-                  Navigator.of(dialogContext).pop();
-                  try {
-                    final snapshot = await FirebaseFirestore.instance
-                        .collection('users')
-                        .where('role', isEqualTo: 'serviceCenter')
-                        .get();
-                    final usersList = snapshot.docs.map((doc) {
-                      var data = doc.data();
-                      data['uid'] = doc.id;
-                      return User.fromMap(data);
-                    }).toList();
-                    String filePath = await ExportService.exportToCSV(
-                      usersList,
-                      [],
-                    );
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'CSV exported successfully to $filePath',
-                          style: GoogleFonts.manrope(color: Colors.white),
-                        ),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  } catch (e) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Failed to export CSV: $e',
-                          style: GoogleFonts.manrope(),
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.text_snippet, color: Colors.blue),
-                title: Text('Text File', style: GoogleFonts.manrope()),
-                onTap: () async {
-                  Navigator.of(dialogContext).pop();
-                  try {
-                    final snapshot = await FirebaseFirestore.instance
-                        .collection('users')
-                        .where('role', isEqualTo: 'serviceCenter')
-                        .get();
-                    final usersList = snapshot.docs.map((doc) {
-                      var data = doc.data();
-                      data['uid'] = doc.id;
-                      return User.fromMap(data);
-                    }).toList();
-                    String filePath = await ExportService.exportToText(
-                      usersList,
-                      [],
-                    );
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Text file exported successfully to $filePath',
-                          style: GoogleFonts.manrope(color: Colors.white),
-                        ),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  } catch (e) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Failed to export Text: $e',
-                          style: GoogleFonts.manrope(),
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-              ),
-            ],
+          backgroundColor: const Color(0xFF5D40D4),
+        ),
+      );
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to export report: $e',
+            style: GoogleFonts.manrope(),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.manrope(color: const Color(0xFF5D40D4)),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _showServiceCenterDetailsDialog(User user) {
@@ -710,257 +608,297 @@ class _ServiceCentersViewState extends State<ServiceCentersView> {
           return User.fromMap(data);
         }).toList();
 
-        final tabCounts = [
-          users.length,
-          users.where((u) => u.status == 'active').length,
-          users.where((u) => u.status == 'suspended').length,
-          users.where((u) => u.status == 'pending').length,
-          users.where((u) => u.status == 'rejected').length,
-        ];
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('bookings').snapshots(),
+          builder: (context, bookingSnapshot) {
+            final allBookings = bookingSnapshot.data?.docs ?? [];
 
-        List<User> filteredUsers = users;
-        if (_selectedTabIndex == 1) {
-          filteredUsers = users.where((u) => u.status == 'active').toList();
-        } else if (_selectedTabIndex == 2) {
-          filteredUsers = users.where((u) => u.status == 'suspended').toList();
-        } else if (_selectedTabIndex == 3) {
-          filteredUsers = users.where((u) => u.status == 'pending').toList();
-        } else if (_selectedTabIndex == 4) {
-          filteredUsers = users.where((u) => u.status == 'rejected').toList();
-        }
+            final tabCounts = [
+              users.length,
+              users.where((u) => u.status == 'active').length,
+              users.where((u) => u.status == 'suspended').length,
+              users.where((u) => u.status == 'pending').length,
+              users.where((u) => u.status == 'rejected').length,
+            ];
 
-        if (_searchQuery.isNotEmpty) {
-          final query = _searchQuery.toLowerCase();
-          filteredUsers = filteredUsers.where((user) {
-            final nameMatches = user.name.toLowerCase().contains(query);
-            final emailMatches = user.email.toLowerCase().contains(query);
-            final phoneMatches = (user.phoneNumber ?? '')
-                .toLowerCase()
-                .contains(query);
-            final businessMatches = (user.businessName ?? '')
-                .toLowerCase()
-                .contains(query);
-            return nameMatches ||
-                emailMatches ||
-                phoneMatches ||
-                businessMatches;
-          }).toList();
-        }
+            List<User> filteredUsers = users;
+            if (_selectedTabIndex == 1) {
+              filteredUsers = users.where((u) => u.status == 'active').toList();
+            } else if (_selectedTabIndex == 2) {
+              filteredUsers =
+                  users.where((u) => u.status == 'suspended').toList();
+            } else if (_selectedTabIndex == 3) {
+              filteredUsers = users.where((u) => u.status == 'pending').toList();
+            } else if (_selectedTabIndex == 4) {
+              filteredUsers =
+                  users.where((u) => u.status == 'rejected').toList();
+            }
 
-        if (_selectedRegistration == 'Oldest') {
-          filteredUsers = filteredUsers.reversed.toList();
-        }
+            if (_searchQuery.isNotEmpty) {
+              final query = _searchQuery.toLowerCase();
+              filteredUsers = filteredUsers.where((user) {
+                final nameMatches = user.name.toLowerCase().contains(query);
+                final emailMatches = user.email.toLowerCase().contains(query);
+                final phoneMatches = (user.phoneNumber ?? '')
+                    .toLowerCase()
+                    .contains(query);
+                final businessMatches = (user.businessName ?? '')
+                    .toLowerCase()
+                    .contains(query);
+                final addressMatches =
+                    (user.address ?? '').toLowerCase().contains(query);
+                return nameMatches ||
+                    emailMatches ||
+                    phoneMatches ||
+                    businessMatches ||
+                    addressMatches;
+              }).toList();
+            }
 
-        return Column(
-          children: [
-            Builder(
-              builder: (context) {
-                final tabsRow = Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (int i = 0; i < _tabs.length; i++) ...[
-                      _buildTab(
-                        '${_tabs[i]} (${tabCounts[i]})',
-                        i,
-                        i == _selectedTabIndex,
-                      ),
-                      if (i < _tabs.length - 1) const SizedBox(width: 32),
-                    ],
-                  ],
-                );
+            if (_selectedRegistration == 'Oldest') {
+              filteredUsers = filteredUsers.reversed.toList();
+            }
 
-                final filterWidget = _buildFilterDropdown(
-                  'Registration',
-                  _selectedRegistration,
-                  ['Recent', 'Oldest'],
-                  Icons.calendar_today,
-                  (value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedRegistration = value;
-                      });
-                    }
-                  },
-                );
-
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxWidth < 1100) {
-                      return SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            filterWidget,
-                            const SizedBox(width: 32),
-                            tabsRow,
-                          ],
-                        ),
-                      );
-                    }
-
-                    return Row(
+            return Column(
+              children: [
+                Builder(
+                  builder: (context) {
+                    final tabsRow = Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: filterWidget,
+                        for (int i = 0; i < _tabs.length; i++) ...[
+                          _buildTab(
+                            '${_tabs[i]} (${tabCounts[i]})',
+                            i,
+                            i == _selectedTabIndex,
                           ),
-                        ),
-                        tabsRow,
-                        const Expanded(child: SizedBox()),
+                          if (i < _tabs.length - 1) const SizedBox(width: 32),
+                        ],
                       ],
                     );
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0F172A).withValues(alpha: 0.02),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: LayoutBuilder(
-                    builder: (context, tableConstraints) {
-                      return SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(minWidth: 1000),
-                          child: SizedBox(
-                            width: tableConstraints.maxWidth > 1000
-                                ? tableConstraints.maxWidth
-                                : 1000,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
+
+                    final filterWidget = _buildFilterDropdown(
+                      'Registration',
+                      _selectedRegistration,
+                      ['Recent', 'Oldest'],
+                      Icons.calendar_today,
+                      (value) {
+                        if (value != null) {
+                          setState(() {
+                            _selectedRegistration = value;
+                          });
+                        }
+                      },
+                    );
+
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxWidth < 1100) {
+                          return SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 16,
-                                  ),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFF8FAFC),
-                                    border: Border(
-                                      bottom: BorderSide(
-                                        color: Color(0xFFE2E8F0),
+                                filterWidget,
+                                const SizedBox(width: 32),
+                                tabsRow,
+                              ],
+                            ),
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: filterWidget,
+                              ),
+                            ),
+                            tabsRow,
+                            const Expanded(child: SizedBox()),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              const Color(0xFF0F172A).withValues(alpha: 0.02),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: LayoutBuilder(
+                        builder: (context, tableConstraints) {
+                          return SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minWidth: 1000),
+                              child: SizedBox(
+                                width: tableConstraints.maxWidth > 1000
+                                    ? tableConstraints.maxWidth
+                                    : 1000,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 24,
+                                        vertical: 16,
                                       ),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          'CENTER DETAILS',
-                                          style: _headerStyle(),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          'CONTACT INFORMATION',
-                                          style: _headerStyle(),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          'STATUS',
-                                          style: _headerStyle(),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          'BOOKINGS',
-                                          style: _headerStyle(),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          'RATING',
-                                          style: _headerStyle(),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Align(
-                                          alignment: Alignment.centerRight,
-                                          child: Text(
-                                            'ACTIONS',
-                                            style: _headerStyle(),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFF8FAFC),
+                                        border: Border(
+                                          bottom: BorderSide(
+                                            color: Color(0xFFE2E8F0),
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                if (filteredUsers.isEmpty)
-                                  Expanded(
-                                    child: Center(
-                                      child: Text(
-                                        'No Centers Found',
-                                        style: GoogleFonts.manrope(
-                                          color: const Color(0xFF94A3B8),
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            flex: 3,
+                                            child: Text(
+                                              'CENTER DETAILS',
+                                              style: _headerStyle(),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 3,
+                                            child: Text(
+                                              'CONTACT INFORMATION',
+                                              style: _headerStyle(),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              'STATUS',
+                                              style: _headerStyle(),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              'BOOKINGS',
+                                              style: _headerStyle(),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              'RATING',
+                                              style: _headerStyle(),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Align(
+                                              alignment: Alignment.centerRight,
+                                              child: Text(
+                                                'ACTIONS',
+                                                style: _headerStyle(),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  )
-                                else
-                                  Expanded(
-                                    child: ListView.builder(
-                                      itemCount: filteredUsers.length,
-                                      itemBuilder: (context, index) {
-                                        final user = filteredUsers[index];
-                                        final initials =
-                                            user.businessName?.isNotEmpty ==
-                                                true
-                                            ? user.businessName!
-                                                  .substring(0, 1)
-                                                  .toUpperCase()
-                                            : user.name.isNotEmpty
-                                            ? user.name
-                                                  .substring(0, 1)
-                                                  .toUpperCase()
-                                            : '?';
-                                        return _buildTableRow(
-                                          user.uid,
-                                          initials,
-                                          user.businessName ?? user.name,
-                                          'Unknown Location', // Placeholder
-                                          user.status ?? 'pending',
-                                          '0', // Bookings placeholder
-                                          '0.0', // Rating placeholder
-                                          '0', // Reviews placeholder
-                                          user,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                              ],
+                                    if (filteredUsers.isEmpty)
+                                      Expanded(
+                                        child: Center(
+                                          child: Text(
+                                            'No Centers Found',
+                                            style: GoogleFonts.manrope(
+                                              color: const Color(0xFF94A3B8),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      Expanded(
+                                        child: ListView.builder(
+                                          itemCount: filteredUsers.length,
+                                          itemBuilder: (context, index) {
+                                            final user = filteredUsers[index];
+                                            final initials = user.businessName
+                                                        ?.isNotEmpty ==
+                                                    true
+                                                ? user.businessName!
+                                                    .substring(0, 1)
+                                                    .toUpperCase()
+                                                : user.name.isNotEmpty
+                                                    ? user.name
+                                                        .substring(0, 1)
+                                                        .toUpperCase()
+                                                    : '?';
+
+                                            final centerBookings = allBookings
+                                                    .where((doc) =>
+                                                        (doc.data() as Map<
+                                                                String,
+                                                                dynamic>)['serviceCenterId'] ==
+                                                        user.uid)
+                                                    .toList();
+                                            
+                                            final centerBookingsCount = centerBookings.length;
+                                            
+                                            final ratedBookings = centerBookings.where((doc) {
+                                              final bookingData = doc.data() as Map<String, dynamic>;
+                                              return bookingData['rating'] != null;
+                                            }).toList();
+                                            
+                                            double averageRating = 0.0;
+                                            if (ratedBookings.isNotEmpty) {
+                                              final totalRating = ratedBookings.fold<double>(0.0, (sum, doc) {
+                                                final bookingData = doc.data() as Map<String, dynamic>;
+                                                return sum + (bookingData['rating'] as num).toDouble();
+                                              });
+                                              averageRating = totalRating / ratedBookings.length;
+                                            }
+
+                                            return _buildTableRow(
+                                              user.uid,
+                                              initials,
+                                              user.businessName ?? user.name,
+                                              user.address ??
+                                                  'Unknown Location',
+                                              user.status ?? 'pending',
+                                              centerBookingsCount.toString(),
+                                              averageRating.toStringAsFixed(1),
+                                              ratedBookings.length.toString(),
+                                              user,
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      );
-                    },
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );

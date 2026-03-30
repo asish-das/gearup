@@ -734,7 +734,7 @@ class _MyServicesViewState extends State<MyServicesView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Daily Slots Availability',
+                      'Default Template (Applying to all days)',
                       style: GoogleFonts.manrope(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -826,19 +826,8 @@ class _MyServicesViewState extends State<MyServicesView> {
                                 ],
                               ),
                             ),
-                            PopupMenuItem<int>(
-                              value: 1,
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.event_busy,
-                                    color: Color(0xFFEF4444),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text('Booked', style: GoogleFonts.manrope()),
-                                ],
-                              ),
-                            ),
+                            // Status 1 (Booked) removed as it's for specific dates only.
+                            // Global slots should be either 0 (Available) or 2 (Blocked).
                             PopupMenuItem<int>(
                               value: 2,
                               child: Row(
