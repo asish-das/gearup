@@ -122,9 +122,19 @@ class _InventoryManagerViewState extends State<InventoryManagerView> {
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('purchases')
+                  .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Text('Error: ${snapshot.error}\n(You may need to create a composite index for timestamp)', 
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 11, color: Colors.red)),
+                    ),
+                  );
+                }
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
                 final orders = snapshot.data!.docs;
@@ -139,60 +149,151 @@ class _InventoryManagerViewState extends State<InventoryManagerView> {
                   itemCount: orders.length,
                   separatorBuilder: (context, index) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final data = orders[index].data() as Map<String, dynamic>;
-                    final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
+                    final doc = orders[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final timestamp = (data['createdAt'] as Timestamp?)?.toDate();
+                    final status = data['status'] ?? 'pending';
+                    final imageUrl = data['imageUrl'] as String?;
 
                     return Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFF1F5F9)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  data['partName'] ?? 'Unknown Part',
-                                  style: GoogleFonts.manrope(
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF0F172A),
+                              if (imageUrl != null && imageUrl.isNotEmpty)
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  margin: const EdgeInsets.only(right: 12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    image: DecorationImage(
+                                      image: imageUrl.startsWith('data:image')
+                                          ? MemoryImage(base64Decode(imageUrl.split(',').last))
+                                          : NetworkImage(imageUrl) as ImageProvider,
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
-                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      data['partName'] ?? 'Unknown Part',
+                                      style: GoogleFonts.manrope(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: const Color(0xFF0F172A),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      '₹${data['price']}',
+                                      style: GoogleFonts.manrope(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: const Color(0xFF10B981),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.person_outline, size: 14, color: Color(0xFF64748B)),
+                              const SizedBox(width: 4),
                               Text(
-                                '₹${data['price']}',
-                                style: GoogleFonts.manrope(
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF10B981),
+                                data['userName'] ?? 'User',
+                                style: GoogleFonts.manrope(fontSize: 13, color: const Color(0xFF64748B)),
+                              ),
+                              const Spacer(),
+                              Text(
+                                'Qty: ${data['quantity'] ?? 1}',
+                                style: GoogleFonts.manrope(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on_outlined, size: 14, color: Color(0xFF64748B)),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  data['address'] ?? 'No address provided',
+                                  style: GoogleFonts.manrope(fontSize: 12, color: const Color(0xFF64748B)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 4),
                           Row(
+                            children: [
+                              const Icon(Icons.phone_outlined, size: 14, color: Color(0xFF64748B)),
+                              const SizedBox(width: 4),
+                              Text(
+                                data['phone'] ?? 'No phone',
+                                style: GoogleFonts.manrope(fontSize: 12, color: const Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                data['userName'] ?? 'User',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 12,
-                                  color: const Color(0xFF64748B),
-                                ),
-                              ),
                               if (timestamp != null)
                                 Text(
-                                  '${timestamp.day}/${timestamp.month} ${timestamp.hour}:${timestamp.minute}',
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 10,
-                                    color: const Color(0xFF94A3B8),
+                                  '${timestamp.day}/${timestamp.month}/${timestamp.year}',
+                                  style: GoogleFonts.manrope(fontSize: 11, color: const Color(0xFF94A3B8)),
+                                ),
+                              Container(
+                                height: 32,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: ['pending', 'shipped', 'delivered', 'cancelled'].contains(status) ? status : 'pending',
+                                    items: ['pending', 'shipped', 'delivered', 'cancelled'].map((String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(
+                                          value.toUpperCase(),
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: value == 'pending' ? Colors.orange : (value == 'delivered' ? Colors.green : Colors.blue),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (newStatus) {
+                                      if (newStatus != null) {
+                                        FirebaseFirestore.instance
+                                            .collection('purchases')
+                                            .doc(doc.id)
+                                            .update({'status': newStatus});
+                                      }
+                                    },
                                   ),
                                 ),
+                              ),
                             ],
                           ),
                         ],

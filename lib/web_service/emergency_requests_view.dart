@@ -1068,7 +1068,7 @@ class _EmergencyRequestsViewState extends State<EmergencyRequestsView> {
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: _teamMembers.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, idx) {
                       final member = _teamMembers[idx];
                       final isAvailable = member['status'] == 'AVAILABLE';

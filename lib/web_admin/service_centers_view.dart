@@ -864,9 +864,9 @@ class _ServiceCentersViewState extends State<ServiceCentersView> {
                                             
                                             double averageRating = 0.0;
                                             if (ratedBookings.isNotEmpty) {
-                                              final totalRating = ratedBookings.fold<double>(0.0, (sum, doc) {
+                                              final totalRating = ratedBookings.fold<double>(0.0, (total, doc) {
                                                 final bookingData = doc.data() as Map<String, dynamic>;
-                                                return sum + (bookingData['rating'] as num).toDouble();
+                                                return total + (bookingData['rating'] as num).toDouble();
                                               });
                                               averageRating = totalRating / ratedBookings.length;
                                             }

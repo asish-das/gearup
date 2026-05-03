@@ -290,7 +290,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const ServiceHistoryScreen(),
+                            builder: (_) => const ActivityHistoryScreen(),
                           ),
                         );
                       }

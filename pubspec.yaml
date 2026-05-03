@@ -29,6 +29,7 @@ dependencies:
   universal_html: ^2.3.0
   printing: ^5.14.2
   google_generative_ai: ^0.4.7
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

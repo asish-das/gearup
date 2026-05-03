@@ -70,7 +70,7 @@ class _MainNavigationState extends State<MainNavigation> {
     const SupermarketScreen(),
     const ServiceCentersScreen(),
     const ServiceTrackingScreen(),
-    const ServiceHistoryScreen(),
+    const ActivityHistoryScreen(),
     ProfilePage(onTabSelected: (index) {
       setState(() => _currentIndex = index);
     }),
@@ -79,7 +79,10 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
       floatingActionButton: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: AIService.aiConfigStream(),
         builder: (context, snapshot) {

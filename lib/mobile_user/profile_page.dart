@@ -338,8 +338,8 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 12),
             _buildListTile(
               Icons.history,
-              'Service History',
-              'View recent repairs',
+              'Activity History',
+              'View services & orders',
               onTap: () {
                 if (widget.onTabSelected != null) {
                   widget.onTabSelected!(4);
@@ -347,7 +347,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const ServiceHistoryScreen(),
+                      builder: (_) => const ActivityHistoryScreen(),
                     ),
                   );
                 }
