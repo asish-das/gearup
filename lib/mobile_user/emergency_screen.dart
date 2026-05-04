@@ -274,6 +274,7 @@ class EmergencyScreen extends StatelessWidget {
       builder: (context) {
         String locationDescription = 'Fetching location...';
         bool isLocationFetching = true;
+        Position? userPosition;
         String? selectedCenterId;
         String? selectedCenterName;
         bool findNearest = true;
@@ -281,10 +282,11 @@ class EmergencyScreen extends StatelessWidget {
         return StatefulBuilder(
           builder: (context, setState) {
             if (isLocationFetching) {
-              _fetchCurrentAddress().then((address) {
+              _fetchCurrentAddressAndPosition().then((result) {
                 if (context.mounted) {
                   setState(() {
-                    locationDescription = address ?? 'Current GPS Location';
+                    locationDescription = result?['address'] ?? 'Current GPS Location';
+                    userPosition = result?['position'];
                     isLocationFetching = false;
                   });
                 }
@@ -481,6 +483,8 @@ class EmergencyScreen extends StatelessWidget {
                         'userName': userData['name'] ?? 'User',
                         'userPhone': userData['phoneNumber'] ?? user.phoneNumber ?? 'N/A',
                         'address': locationDescription,
+                        if (userPosition != null)
+                          'location': GeoPoint(userPosition!.latitude, userPosition!.longitude),
                         'timestamp': FieldValue.serverTimestamp(),
                         'status': 'PENDING',
                       });
@@ -520,7 +524,7 @@ class EmergencyScreen extends StatelessWidget {
     );
   }
 
-  Future<String?> _fetchCurrentAddress() async {
+  Future<Map<String, dynamic>?> _fetchCurrentAddressAndPosition() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) return null;
@@ -543,9 +547,9 @@ class EmergencyScreen extends StatelessWidget {
         position.longitude,
       );
 
+      String address = '';
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks.first;
-        String address = '';
         if (place.street != null && place.street!.isNotEmpty) {
           address += '${place.street}, ';
         }
@@ -555,12 +559,14 @@ class EmergencyScreen extends StatelessWidget {
         if (place.locality != null && place.locality!.isNotEmpty) {
           address += place.locality!;
         }
-
-        return address.isNotEmpty ? address : null;
       }
+
+      return {
+        'address': address.isNotEmpty ? address : null,
+        'position': position,
+      };
     } catch (e) {
       return null;
     }
-    return null;
   }
 }

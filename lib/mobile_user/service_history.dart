@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:convert';
 
 class ActivityHistoryScreen extends StatefulWidget {
   const ActivityHistoryScreen({super.key});
@@ -130,10 +131,19 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: filteredDocs.length,
-          itemBuilder: (context, index) => _buildServiceItem(filteredDocs[index], index == filteredDocs.length - 1, isPast),
+        return RefreshIndicator(
+          onRefresh: () async {
+            await Future.delayed(const Duration(milliseconds: 800));
+            if (mounted) setState(() {});
+          },
+          color: AppTheme.primary,
+          backgroundColor: AppTheme.surface,
+          child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            itemCount: filteredDocs.length,
+            itemBuilder: (context, index) => _buildServiceItem(filteredDocs[index], index == filteredDocs.length - 1, isPast),
+          ),
         );
       },
     );
@@ -173,10 +183,19 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: sortedDocs.length,
-          itemBuilder: (context, index) => _buildOrderItem(sortedDocs[index], index == sortedDocs.length - 1),
+        return RefreshIndicator(
+          onRefresh: () async {
+            await Future.delayed(const Duration(milliseconds: 800));
+            if (mounted) setState(() {});
+          },
+          color: AppTheme.primary,
+          backgroundColor: AppTheme.surface,
+          child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            itemCount: sortedDocs.length,
+            itemBuilder: (context, index) => _buildOrderItem(sortedDocs[index], index == sortedDocs.length - 1),
+          ),
         );
       },
     );
@@ -338,19 +357,8 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
                     clipBehavior: Clip.antiAlias,
                     child: Column(
                       children: [
-                        if (imageUrl.startsWith('http'))
-                          CachedNetworkImage(
-                            imageUrl: imageUrl,
-                            width: double.infinity,
-                            height: 128,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Container(color: Colors.white10),
-                            errorWidget: (context, url, error) => Container(
-                              height: 128,
-                              color: Colors.white10,
-                              child: const Icon(Icons.image_not_supported_outlined, color: Colors.white24),
-                            ),
-                          ),
+                        if (imageUrl.isNotEmpty)
+                          _buildImage(imageUrl, width: double.infinity, height: 128),
                         Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Row(
@@ -444,8 +452,8 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: (data['imageUrl'] != null && data['imageUrl'].toString().startsWith('http'))
-                          ? Image.network(data['imageUrl'], width: 64, height: 64, fit: BoxFit.cover)
+                        child: (data['imageUrl'] != null && data['imageUrl'].toString().isNotEmpty)
+                          ? _buildImage(data['imageUrl'].toString(), width: 64, height: 64)
                           : Container(width: 64, height: 64, color: Colors.white10),
                       ),
                       const SizedBox(width: 16),
@@ -663,6 +671,40 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
           SizedBox(width: 80, child: Text(label, style: const TextStyle(color: Colors.white54, fontSize: 13))),
           Expanded(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500))),
         ],
+      ),
+    );
+  }
+
+  Widget _buildImage(String source, {double? width, double? height}) {
+    if (source.startsWith('data:image')) {
+      try {
+        final base64Str = source.split(',').last;
+        return Image.memory(
+          base64Decode(base64Str),
+          width: width,
+          height: height,
+          fit: BoxFit.cover,
+        );
+      } catch (e) {
+        return Container(
+          width: width,
+          height: height,
+          color: Colors.white10,
+          child: const Icon(Icons.image_not_supported_outlined, color: Colors.white24),
+        );
+      }
+    }
+    return CachedNetworkImage(
+      imageUrl: source,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      placeholder: (context, url) => Container(width: width, height: height, color: Colors.white10),
+      errorWidget: (context, url, error) => Container(
+        width: width,
+        height: height,
+        color: Colors.white10,
+        child: const Icon(Icons.image_not_supported_outlined, color: Colors.white24),
       ),
     );
   }

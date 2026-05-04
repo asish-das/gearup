@@ -189,7 +189,7 @@ class _SupermarketScreenState extends State<SupermarketScreen> {
   }
 
   Widget _buildProductList() {
-    Query query = FirebaseFirestore.instance.collection('spareParts').where('stock', isGreaterThan: 0);
+    Query query = FirebaseFirestore.instance.collection('spareParts');
     
     if (_selectedCategory != 'All') {
       query = query.where('category', isEqualTo: _selectedCategory);
@@ -198,25 +198,43 @@ class _SupermarketScreenState extends State<SupermarketScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: query.snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
-        }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white)));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Error: ${snapshot.error}', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+              ],
+            ),
+          );
         }
-        
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
+        }
+
         var docs = snapshot.data?.docs ?? [];
         
-        // Local filtering for search query
-        if (_searchQuery.isNotEmpty) {
-          docs = docs.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
+        // In-memory filtering for stock, category (if not handled by Firestore), and search query
+        docs = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          
+          // 1. Stock filter (must be greater than 0)
+          final stock = (data['stock'] is int) ? data['stock'] as int : int.tryParse(data['stock']?.toString() ?? '0') ?? 0;
+          if (stock <= 0) return false;
+
+          // 2. Search query filter
+          if (_searchQuery.isNotEmpty) {
             final name = (data['name'] ?? '').toString().toLowerCase();
             final category = (data['category'] ?? '').toString().toLowerCase();
             final q = _searchQuery.toLowerCase();
-            return name.contains(q) || category.contains(q);
-          }).toList();
-        }
+            if (!name.contains(q) && !category.contains(q)) return false;
+          }
+
+          return true;
+        }).toList();
 
         if (docs.isEmpty) {
           return Center(
@@ -240,16 +258,25 @@ class _SupermarketScreenState extends State<SupermarketScreen> {
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final part = SparePart.fromMap(docs[index].data() as Map<String, dynamic>, docs[index].id);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _buildProductCard(part),
-            );
+        return RefreshIndicator(
+          onRefresh: () async {
+            await Future.delayed(const Duration(milliseconds: 800));
+            if (mounted) setState(() {});
           },
+          color: AppTheme.primary,
+          backgroundColor: AppTheme.surface,
+          child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final part = SparePart.fromMap(docs[index].data() as Map<String, dynamic>, docs[index].id);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildProductCard(part),
+              );
+            },
+          ),
         );
       },
     );
@@ -749,6 +776,28 @@ class _SupermarketScreenState extends State<SupermarketScreen> {
                                           ),
                                           const SizedBox(height: 16),
                                           _buildTrackingStepper(status),
+                                          const SizedBox(height: 20),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton.icon(
+                                              onPressed: () => _showTrackingModal(data, sortedDocs[index].id),
+                                              icon: const Icon(Icons.track_changes_rounded, size: 18),
+                                              label: Text(
+                                                'TRACK ORDER',
+                                                style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, letterSpacing: 1),
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
+                                                foregroundColor: AppTheme.primary,
+                                                elevation: 0,
+                                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(16),
+                                                  side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.3)),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                         ],
                                       ],
                                     ),
@@ -767,6 +816,271 @@ class _SupermarketScreenState extends State<SupermarketScreen> {
           },
         );
       },
+    );
+  }
+
+  void _showTrackingModal(Map<String, dynamic> initialData, String orderId) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundDark,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          child: StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance.collection('orders').doc(orderId).snapshots(),
+            builder: (context, snapshot) {
+              final data = snapshot.hasData ? (snapshot.data!.data() as Map<String, dynamic>?) ?? initialData : initialData;
+              final status = data['status'] ?? 'pending';
+              final items = data['items'] as List? ?? [];
+              
+              return Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 16, 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Live Tracking',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.05),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close, color: Colors.white, size: 20),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.all(24),
+                      children: [
+                        _buildDetailedTrackingStepper(status),
+                        const SizedBox(height: 32),
+                        Text(
+                          'ITEM INFORMATION',
+                          style: GoogleFonts.spaceGrotesk(
+                            color: Colors.white54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ...items.map((item) => Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.03),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10),
+                                  color: Colors.white.withValues(alpha: 0.05),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: item['imageUrl'] != null 
+                                    ? _buildPartImage(item['imageUrl'])
+                                    : const Icon(Icons.settings, color: AppTheme.primary, size: 20),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item['partName'] ?? 'Unknown Part',
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      'Qty: ${item['quantity']} • ₹${item['price']}',
+                                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                        const SizedBox(height: 32),
+                        _trackingDetailRow('Order Status', status.toString().toUpperCase(), isPrimary: true),
+                        _trackingDetailRow('Tracking ID', '#${orderId.substring(0, 10).toUpperCase()}'),
+                        _trackingDetailRow('Delivery Address', data['address'] ?? 'N/A'),
+                        _trackingDetailRow('Contact Phone', data['phone'] ?? 'N/A'),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Divider(color: Colors.white10),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Total Amount', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 16)),
+                            Text(
+                              '₹${data['totalAmount']}',
+                              style: GoogleFonts.spaceGrotesk(color: AppTheme.primary, fontSize: 24, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailedTrackingStepper(String status) {
+    final steps = ['pending', 'shipped', 'out for delivery', 'delivered'];
+    final currentIndex = steps.indexOf(status.toLowerCase());
+    
+    return Column(
+      children: List.generate(steps.length, (index) {
+        final isCompleted = index <= currentIndex;
+        final isCurrent = index == currentIndex;
+        final isLast = index == steps.length - 1;
+        
+        return IntrinsicHeight(
+          child: Row(
+            children: [
+              Column(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: isCompleted ? AppTheme.primary : Colors.white10,
+                      shape: BoxShape.circle,
+                      boxShadow: isCurrent ? [
+                        BoxShadow(
+                          color: AppTheme.primary.withValues(alpha: 0.4),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        )
+                      ] : null,
+                    ),
+                    child: Icon(
+                      isCompleted ? Icons.check_rounded : Icons.circle,
+                      size: 16,
+                      color: isCompleted ? Colors.white : Colors.white24,
+                    ),
+                  ),
+                  if (!isLast)
+                    Expanded(
+                      child: Container(
+                        width: 2,
+                        color: isCompleted ? AppTheme.primary : Colors.white10,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      steps[index].toUpperCase(),
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isCompleted ? Colors.white : Colors.white24,
+                      ),
+                    ),
+                    Text(
+                      _getTrackingStepDesc(steps[index]),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isCompleted ? Colors.white54 : Colors.white10,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  String _getTrackingStepDesc(String step) {
+    switch (step.toLowerCase()) {
+      case 'pending': return 'Your order is being processed by the center';
+      case 'shipped': return 'Your package has been dispatched from the warehouse';
+      case 'out for delivery': return 'Our delivery executive is on the way to you';
+      case 'delivered': return 'Package delivered successfully to your address';
+      default: return 'Status update in progress';
+    }
+  }
+
+  Widget _trackingDetailRow(String label, String value, {bool isPrimary = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white38, fontSize: 13),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: isPrimary ? AppTheme.primary : Colors.white,
+                fontWeight: isPrimary ? FontWeight.bold : FontWeight.normal,
+                fontSize: 13,
+              ),
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

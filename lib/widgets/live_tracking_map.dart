@@ -7,11 +7,15 @@ import '../services/live_tracking_service.dart';
 class LiveTrackingMap extends StatefulWidget {
   final String trackingId;
   final bool isDriver;
+  final LatLng? userLocation;
+  final LatLng? serviceCenterLocation;
 
   const LiveTrackingMap({
     super.key,
     required this.trackingId,
     this.isDriver = false,
+    this.userLocation,
+    this.serviceCenterLocation,
   });
 
   @override
@@ -139,17 +143,17 @@ class _LiveTrackingMapState extends State<LiveTrackingMap> {
     return FlutterMap(
       mapController: _mapController,
       options: MapOptions(
-        initialCenter: _currentLocation ?? const LatLng(0, 0),
-        initialZoom: _currentLocation == null ? 2.0 : 15.0,
+        initialCenter: widget.userLocation ?? _currentLocation ?? widget.serviceCenterLocation ?? const LatLng(0, 0),
+        initialZoom: (_currentLocation == null && widget.userLocation == null) ? 2.0 : 15.0,
       ),
       children: [
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.example.gearup',
         ),
-        if (_currentLocation != null)
-          MarkerLayer(
-            markers: [
+        MarkerLayer(
+          markers: [
+            if (_currentLocation != null)
               Marker(
                 point: _currentLocation!,
                 width: 60,
@@ -168,8 +172,46 @@ class _LiveTrackingMapState extends State<LiveTrackingMap> {
                   ),
                 ),
               ),
-            ],
-          ),
+            if (widget.userLocation != null)
+              Marker(
+                point: widget.userLocation!,
+                width: 60,
+                height: 60,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.blueAccent.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.person_pin_circle,
+                      color: Colors.blueAccent,
+                      size: 32,
+                    ),
+                  ),
+                ),
+              ),
+            if (widget.serviceCenterLocation != null)
+              Marker(
+                point: widget.serviceCenterLocation!,
+                width: 60,
+                height: 60,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.store,
+                      color: Colors.green,
+                      size: 32,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }

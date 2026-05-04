@@ -6,6 +6,7 @@ import '../models/user.dart';
 class AuthService {
   static final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static bool isProcessingAuth = false;
 
   // Get current user stream
   static Stream<auth.User?> get authStateChanges => _auth.authStateChanges();
@@ -58,7 +59,7 @@ class AuthService {
       await _firestore.collection('users').doc(user.uid).set(user.toMap());
       debugPrint('AuthService: User document set successfully');
       
-      return result.user!.uid;
+      return user.uid;
     } on auth.FirebaseAuthException catch (e) {
       debugPrint('AuthService: FirebaseAuthException: ${e.code} - ${e.message}');
       throw e.message ?? 'An unknown authentication error occurred';
@@ -201,6 +202,22 @@ class AuthService {
       throw e.toString();
     }
   }
+  // Get the current user's data in real-time
+  static Stream<User?> userDataStream(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .map((doc) {
+          if (doc.exists) {
+            final data = doc.data() as Map<String, dynamic>;
+            data['uid'] = doc.id;
+            return User.fromMap(data);
+          }
+          return null;
+        });
+  }
+
   // Get the current user's status in real-time
   static Stream<String?> userStatusStream(String uid) {
     return _firestore

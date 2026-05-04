@@ -20,6 +20,9 @@ class _ProfileViewState extends State<ProfileView> {
   final _phoneController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _imageUrlController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _latitudeController = TextEditingController();
+  final _longitudeController = TextEditingController();
 
   bool _isLoading = true;
 
@@ -82,6 +85,9 @@ class _ProfileViewState extends State<ProfileView> {
             _phoneController.text = data['phoneNumber'] ?? '';
             _descriptionController.text = data['description'] ?? '';
             _imageUrlController.text = data['profileImageUrl'] ?? '';
+            _addressController.text = data['address'] ?? '';
+            _latitudeController.text = data['latitude']?.toString() ?? '';
+            _longitudeController.text = data['longitude']?.toString() ?? '';
 
             if (data['operatingHours'] != null) {
               final hours = data['operatingHours'] as Map<String, dynamic>;
@@ -95,9 +101,14 @@ class _ProfileViewState extends State<ProfileView> {
             if (data['serviceCategories'] != null) {
               final cats = data['serviceCategories'] as Map<String, dynamic>;
               cats.forEach((key, value) {
-                if (_serviceCategories.containsKey(key)) {
-                  _serviceCategories[key] = value as bool;
-                }
+                _serviceCategories[key] = value as bool;
+              });
+            }
+
+            if (data['serviceCategoryDescriptions'] != null) {
+              final descs = data['serviceCategoryDescriptions'] as Map<String, dynamic>;
+              descs.forEach((key, value) {
+                _serviceCategoryDesc[key] = value.toString();
               });
             }
             _isLoading = false;
@@ -132,10 +143,14 @@ class _ProfileViewState extends State<ProfileView> {
         'phoneNumber': _phoneController.text.trim(),
         'description': _descriptionController.text.trim(),
         'profileImageUrl': _imageUrlController.text.trim(),
+        'address': _addressController.text.trim(),
+        'latitude': double.tryParse(_latitudeController.text.trim()),
+        'longitude': double.tryParse(_longitudeController.text.trim()),
         // Cannot update auth email safely here, just contact email optionally:
         'email': _emailController.text.trim(),
         'operatingHours': _operatingHours,
         'serviceCategories': _serviceCategories,
+        'serviceCategoryDescriptions': _serviceCategoryDesc,
       });
 
       if (mounted) {
@@ -182,6 +197,43 @@ class _ProfileViewState extends State<ProfileView> {
     }
   }
 
+  void _showAddCategoryDialog() {
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Add Custom Service', style: GoogleFonts.manrope(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildTextField('Service Name', titleController),
+            const SizedBox(height: 16),
+            _buildTextField('Description', descController),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (titleController.text.isNotEmpty) {
+                setState(() {
+                  final title = titleController.text.trim();
+                  _serviceCategories[title] = true;
+                  _serviceCategoryDesc[title] = descController.text.trim();
+                });
+                Navigator.pop(context);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF5D40D4)),
+            child: const Text('Add Service', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _garageNameController.dispose();
@@ -189,6 +241,9 @@ class _ProfileViewState extends State<ProfileView> {
     _phoneController.dispose();
     _descriptionController.dispose();
     _imageUrlController.dispose();
+    _addressController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     super.dispose();
   }
 
@@ -422,6 +477,22 @@ class _ProfileViewState extends State<ProfileView> {
                   _descriptionController,
                   maxLines: 3,
                 ),
+                const SizedBox(height: 24),
+                _buildTextField('Address', _addressController),
+                const SizedBox(height: 24),
+                if (isMobile) ...[
+                  _buildTextField('Latitude', _latitudeController),
+                  const SizedBox(height: 24),
+                  _buildTextField('Longitude', _longitudeController),
+                ] else ...[
+                  Row(
+                    children: [
+                      Expanded(child: _buildTextField('Latitude', _latitudeController)),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildTextField('Longitude', _longitudeController)),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -454,44 +525,90 @@ class _ProfileViewState extends State<ProfileView> {
             subtitle:
                 'Select the types of services you provide at this location.',
             content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (isMobile) ...[
-                  _buildCategoryCard('Mechanic'),
-                  const SizedBox(height: 16),
-                  _buildCategoryCard('Wash & Detail'),
-                  const SizedBox(height: 16),
-                  _buildCategoryCard('Tire Shop'),
-                  const SizedBox(height: 16),
-                  _buildCategoryCard('Electrical'),
-                  const SizedBox(height: 16),
-                  _buildCategoryCard('Oil & Fluids'),
-                  const SizedBox(height: 16),
-                  _buildCategoryCard('Body Shop'),
-                ] else ...[
-                  Row(
-                    children: [
-                      Expanded(child: _buildCategoryCard('Mechanic')),
-                      const SizedBox(width: 24),
-                      Expanded(child: _buildCategoryCard('Wash & Detail')),
-                    ],
+                if (_serviceCategories.values.any((v) => v)) ...[
+                  Text(
+                    'Active Services Highlight',
+                    style: GoogleFonts.manrope(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF5D40D4),
+                    ),
                   ),
+                  const SizedBox(height: 16),
+                  ..._serviceCategories.entries
+                      .where((e) => e.value)
+                      .map((e) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.stars, color: Color(0xFF5D40D4), size: 20),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        e.key,
+                                        style: GoogleFonts.manrope(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      Text(
+                                        _serviceCategoryDesc[e.key] ?? '',
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 13,
+                                          color: const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
                   const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(child: _buildCategoryCard('Tire Shop')),
-                      const SizedBox(width: 24),
-                      Expanded(child: _buildCategoryCard('Electrical')),
-                    ],
-                  ),
+                  const Divider(),
                   const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(child: _buildCategoryCard('Oil & Fluids')),
-                      const SizedBox(width: 24),
-                      Expanded(child: _buildCategoryCard('Body Shop')),
-                    ],
-                  ),
                 ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final categories = _serviceCategories.keys.toList();
+                    return Wrap(
+                      spacing: 24,
+                      runSpacing: 24,
+                      children: categories.map((cat) {
+                        return SizedBox(
+                          width: constraints.maxWidth > 600
+                              ? (constraints.maxWidth - 24) / 2
+                              : constraints.maxWidth,
+                          child: _buildCategoryCard(cat),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _showAddCategoryDialog,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Custom Service Category'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF5D40D4),
+                      side: const BorderSide(color: Color(0xFF5D40D4)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

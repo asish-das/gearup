@@ -261,18 +261,35 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
+    // Prevent main.dart auth listener from navigating while we handle it manually
+    AuthService.isProcessingAuth = true;
+
     try {
       await AuthService.signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      // Navigation is handled by auth state changes in main.dart
+      if (mounted) {
+        // Navigate to home and clear navigation stack
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/home',
+          (route) => false,
+        );
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+        });
+      }
     } finally {
+      // We don't set isProcessingAuth = false here immediately because the navigation 
+      // above might trigger a rebuild, and we want the listener to stay quiet until 
+      // the new screen is settled. However, finally is the safest place to ensure 
+      // the app doesn't get stuck.
+      AuthService.isProcessingAuth = false;
       if (mounted) {
         setState(() {
           _isLoading = false;

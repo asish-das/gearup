@@ -82,21 +82,34 @@ class NotificationScreen extends StatelessWidget {
           });
 
           if (notifications.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+            return RefreshIndicator(
+              onRefresh: () async {
+                // Just a small delay to show the indicator since it's a stream
+                await Future.delayed(const Duration(seconds: 1));
+              },
+              color: AppTheme.primary,
+              backgroundColor: AppTheme.surface,
+              child: ListView(
                 children: [
-                  Icon(
-                    Icons.notifications_off_outlined,
-                    size: 80,
-                    color: Colors.white.withValues(alpha: 0.2),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No notifications yet',
-                    style: GoogleFonts.manrope(
-                      fontSize: 18,
-                      color: Colors.white54,
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.notifications_off_outlined,
+                          size: 80,
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No notifications yet',
+                          style: GoogleFonts.manrope(
+                            fontSize: 18,
+                            color: Colors.white54,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -104,11 +117,18 @@ class NotificationScreen extends StatelessWidget {
             );
           }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: notifications.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
+          return RefreshIndicator(
+            onRefresh: () async {
+              await Future.delayed(const Duration(seconds: 1));
+            },
+            color: AppTheme.primary,
+            backgroundColor: AppTheme.surface,
+            child: ListView.separated(
+              padding: const EdgeInsets.all(16),
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: notifications.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
               final data = notifications[index].data() as Map<String, dynamic>;
               final timestamp =
                   (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
@@ -198,11 +218,12 @@ class NotificationScreen extends StatelessWidget {
                 ),
               );
             },
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 
   IconData _getIcon(String? type) {
     switch (type) {

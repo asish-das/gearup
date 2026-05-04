@@ -46,6 +46,13 @@ class _GearUpAppState extends State<GearUpApp> {
 
   Future<void> _initializeAuth() async {
     AuthService.authStateChanges.listen((user) async {
+      // If we are explicitly processing auth (registration/login), skip automatic updates
+      // to avoid race conditions and unexpected navigation jumps.
+      if (AuthService.isProcessingAuth) {
+        debugPrint('Main: Auth state change ignored because AuthService is processing auth.');
+        return;
+      }
+
       try {
         if (user != null) {
           debugPrint('Main: Auth state change: User is logged in (${user.uid}). Fetching data...');

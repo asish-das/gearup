@@ -5,7 +5,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ServiceCentersScreen extends StatefulWidget {
-  const ServiceCentersScreen({super.key});
+  final String? initialCategory;
+  const ServiceCentersScreen({super.key, this.initialCategory});
 
   @override
   State<ServiceCentersScreen> createState() => _ServiceCentersScreenState();
@@ -15,6 +16,13 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedFilter = 'Nearest'; // Nearest, Rating, Popular, Open Now
+  late String _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = widget.initialCategory ?? 'All';
+  }
 
   @override
   void dispose() {
@@ -64,10 +72,9 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
       ),
       body: Column(
         children: [
-          // Filters
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
                 _buildFilterButton('Nearest', isSelected: _selectedFilter == 'Nearest'),
@@ -80,6 +87,9 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
               ],
             ),
           ),
+
+
+
 
           // List
           Expanded(
@@ -121,8 +131,14 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
                       status == 'pending';
                   final matchesSearch =
                       name.contains(_searchQuery.toLowerCase());
+                  
+                  bool matchesCategory = _selectedCategory == 'All';
+                  if (!matchesCategory && data['serviceCategories'] != null) {
+                    final cats = Map<String, bool>.from(data['serviceCategories']);
+                    matchesCategory = cats[_selectedCategory] == true;
+                  }
 
-                  return matchesStatus && matchesSearch;
+                  return matchesStatus && matchesSearch && matchesCategory;
                 }).toList();
 
                 // Sort logic
@@ -153,43 +169,58 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
                   );
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: centers.length,
-                  itemBuilder: (context, index) {
-                    final data = centers[index].data() as Map<String, dynamic>;
-                    final docId = centers[index].id;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _buildCenterCard(
-                        context: context,
-                        uid: docId,
-                        name:
-                            data['businessName']?.toString().isNotEmpty == true
-                            ? data['businessName']
-                            : (data['name'] ?? 'Unknown Center'),
-                        distance: data['address']?.toString().isNotEmpty == true
-                            ? data['address']
-                            : 'Location not specified',
-                        description:
-                            data['description']?.toString().isNotEmpty == true
-                            ? data['description']
-                            : 'Professional vehicle maintenance and repair services.',
-                        rating: data['rating'] != null 
-                            ? (data['rating'] as num).toDouble().toStringAsFixed(1)
-                            : 'New',
-                        imageUrl:
-                            data['profileImageUrl']?.toString().isNotEmpty ==
-                                true
-                            ? data['profileImageUrl']
-                            : 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-                        status:
-                            (data['status']?.toString().toUpperCase() ??
-                            'AVAILABLE'),
-                      ),
-                    );
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    // Since we use StreamBuilder, the data is already real-time.
+                    // However, we can trigger a rebuild of the widget tree to give the user 
+                    // a visual confirmation of the refresh action.
+                    await Future.delayed(const Duration(milliseconds: 800));
+                    if (mounted) setState(() {});
                   },
+                  color: AppTheme.primary,
+                  backgroundColor: AppTheme.surface,
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: centers.length,
+                    itemBuilder: (context, index) {
+                      final data = centers[index].data() as Map<String, dynamic>;
+                      final docId = centers[index].id;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildCenterCard(
+                          context: context,
+                          uid: docId,
+                          name:
+                              data['businessName']?.toString().isNotEmpty == true
+                              ? data['businessName']
+                              : (data['name'] ?? 'Unknown Center'),
+                          distance: data['address']?.toString().isNotEmpty == true
+                              ? data['address']
+                              : 'Location not specified',
+                          description:
+                              data['description']?.toString().isNotEmpty == true
+                              ? data['description']
+                              : 'Professional vehicle maintenance and repair services.',
+                          rating: data['rating'] != null 
+                              ? (data['rating'] as num).toDouble().toStringAsFixed(1)
+                              : 'New',
+                          imageUrl:
+                              data['profileImageUrl']?.toString().isNotEmpty ==
+                                  true
+                              ? data['profileImageUrl']
+                              : 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+                          status:
+                              (data['status']?.toString().toUpperCase() ??
+                              'AVAILABLE'),
+                          categories: data['serviceCategories'] != null 
+                              ? Map<String, bool>.from(data['serviceCategories']) 
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             ),
@@ -198,6 +229,8 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
       ),
     );
   }
+
+
 
   Widget _buildFilterButton(String label, {bool isSelected = false}) {
     return InkWell(
@@ -248,13 +281,18 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
     String? status,
     Color statusColor = AppTheme.accent,
     String? customFooterStr,
+    Map<String, bool>? categories,
   }) {
     return InkWell(
       onTap: () {
         Navigator.pushNamed(
           context,
           '/service_selection',
-          arguments: {'serviceCenterId': uid, 'serviceCenterName': name},
+          arguments: {
+            'serviceCenterId': uid, 
+            'serviceCenterName': name,
+            'initialCategory': _selectedCategory,
+          },
         );
       },
       borderRadius: BorderRadius.circular(16),
@@ -359,6 +397,49 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
                       height: 1.5,
                     ),
                   ),
+                  if (categories != null && categories.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: categories.entries
+                          .where((e) => e.value == true)
+                          .take(3) // Only show top 3 to keep it clean
+                          .map((e) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: AppTheme.primary.withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _getMiniCategoryIcon(e.key),
+                                      color: AppTheme.primary,
+                                      size: 12,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      e.key,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ))
+                          .toList(),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -382,6 +463,7 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
                             arguments: {
                               'serviceCenterId': uid,
                               'serviceCenterName': name,
+                              'initialCategory': _selectedCategory,
                             },
                           );
                         },
@@ -445,5 +527,28 @@ class _ServiceCentersScreenState extends State<ServiceCentersScreen> {
       color: Colors.grey[900],
       child: const Icon(Icons.image, color: Colors.white24, size: 48),
     );
+  }
+  IconData _getMiniCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'engine': return Icons.engineering;
+      case 'oil':
+      case 'fluids':
+      case 'oil & fluids': return Icons.water_drop;
+      case 'brakes': return Icons.album;
+      case 'wheels':
+      case 'tyres':
+      case 'tires': return Icons.adjust;
+      case 'washing':
+      case 'wash':
+      case 'detailing': return Icons.local_car_wash;
+      case 'exterior':
+      case 'body': return Icons.car_repair;
+      case 'ac':
+      case 'cooling': return Icons.ac_unit;
+      case 'electrical':
+      case 'battery': return Icons.electric_bolt;
+      case 'repair': return Icons.build_circle;
+      default: return Icons.build;
+    }
   }
 }

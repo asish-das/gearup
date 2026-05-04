@@ -4,6 +4,8 @@ import 'package:gearup/services/cart_manager.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:convert';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -267,11 +269,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 child: SizedBox(
                   width: 48,
                   height: 48,
-                  child: Image.network(
-                    item.part.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, color: Colors.white24),
-                  ),
+                  child: _buildPartImage(item.part.imageUrl),
                 ),
               ),
               const SizedBox(width: 16),
@@ -490,6 +488,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ),
       ),
+    );
+  }
+
+  Widget _buildPartImage(String source) {
+    if (source.startsWith('data:image')) {
+      try {
+        final base64Str = source.split(',').last;
+        return Image.memory(
+          base64Decode(base64Str),
+          fit: BoxFit.cover,
+        );
+      } catch (e) {
+        return const Center(child: Icon(Icons.image, color: Colors.white24));
+      }
+    }
+    return CachedNetworkImage(
+      imageUrl: source,
+      fit: BoxFit.cover,
+      placeholder: (context, url) => Container(color: Colors.white.withValues(alpha: 0.05)),
+      errorWidget: (context, url, error) => const Center(child: Icon(Icons.image, color: Colors.white24)),
     );
   }
 }

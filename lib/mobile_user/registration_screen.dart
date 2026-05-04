@@ -56,6 +56,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _errorMessage = null;
     });
 
+    // Prevent main.dart auth listener from navigating while we are in the middle of registration
+    AuthService.isProcessingAuth = true;
+
     try {
       debugPrint('RegistrationScreen: Starting registration process...');
       String uid = await AuthService.signUp(
@@ -85,8 +88,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       }
 
       if (mounted) {
-        debugPrint('RegistrationScreen: Redirecting to home...');
-        Navigator.pushReplacementNamed(context, '/home');
+        // Sign out after registration to force manual login as requested by user
+        await AuthService.signOut();
+        
+        if (!mounted) return;
+        
+        debugPrint('RegistrationScreen: Registration successful, redirecting to login...');
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration successful! Please log in to continue.'),
+            backgroundColor: AppTheme.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        Navigator.pushReplacementNamed(context, '/login');
       }
     } catch (e) {
       debugPrint('RegistrationScreen: Registration failed: $e');
@@ -96,6 +113,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         });
       }
     } finally {
+      AuthService.isProcessingAuth = false;
       if (mounted) {
         setState(() {
           _isLoading = false;

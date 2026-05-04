@@ -1,11 +1,37 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:gearup/theme/app_theme.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class ServiceSelectionScreen extends StatelessWidget {
+class ServiceSelectionScreen extends StatefulWidget {
   const ServiceSelectionScreen({super.key});
+
+  @override
+  State<ServiceSelectionScreen> createState() => _ServiceSelectionScreenState();
+}
+
+class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
+  bool _isInitialized = false;
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    }
+  }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _isInitialized = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,18 +148,102 @@ class ServiceSelectionScreen extends StatelessWidget {
                                 height: 1.5,
                               ),
                             ),
-                            const SizedBox(height: 24),
-                            _buildOperatingHours(hours),
-                            const SizedBox(height: 32),
-                            const Text(
-                              'Available Services',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                             const SizedBox(height: 24),
+                             if (centerData['phoneNumber'] != null || centerData['phone'] != null) ...[
+                               Row(
+                                 children: [
+                                   Expanded(
+                                     child: Column(
+                                       crossAxisAlignment: CrossAxisAlignment.start,
+                                       children: [
+                                         const Text(
+                                           'Contact',
+                                           style: TextStyle(
+                                             color: Colors.white,
+                                             fontSize: 18,
+                                             fontWeight: FontWeight.bold,
+                                           ),
+                                         ),
+                                         const SizedBox(height: 8),
+                                         Text(
+                                           (centerData['phoneNumber'] ?? centerData['phone']).toString(),
+                                           style: const TextStyle(
+                                             color: Colors.white70,
+                                             fontSize: 14,
+                                           ),
+                                         ),
+                                       ],
+                                     ),
+                                   ),
+                                   ElevatedButton.icon(
+                                     style: ElevatedButton.styleFrom(
+                                       backgroundColor: AppTheme.primary,
+                                       foregroundColor: Colors.white,
+                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                       shape: RoundedRectangleBorder(
+                                         borderRadius: BorderRadius.circular(20),
+                                       ),
+                                     ),
+                                     onPressed: () {
+                                       final phone = (centerData['phoneNumber'] ?? centerData['phone']).toString();
+                                       if (phone.isNotEmpty) {
+                                         _makePhoneCall(phone);
+                                       }
+                                     },
+                                     icon: const Icon(Icons.call, size: 16),
+                                     label: const Text(
+                                       'Call',
+                                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                     ),
+                                   ),
+                                 ],
+                               ),
+                               const SizedBox(height: 24),
+                             ],
+                             const SizedBox(height: 16),
+                             _buildOperatingHours(hours),
+                             const SizedBox(height: 16),
+                           ],
+                        ),
+                      ),
+                    ),
+
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              child: const Icon(Icons.auto_awesome, color: AppTheme.accent, size: 20),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(width: 12),
+                            const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Available Services',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                Text(
+                                  'Curated for your vehicle',
+                                  style: TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -171,8 +281,8 @@ class ServiceSelectionScreen extends StatelessWidget {
                           );
                         }
 
-                        final services = servicesSnapshot.data?.docs ?? [];
-
+                        var services = servicesSnapshot.data?.docs ?? [];
+                        
                         if (services.isEmpty) {
                           return const SliverFillRemaining(
                             child: Center(
@@ -184,35 +294,54 @@ class ServiceSelectionScreen extends StatelessWidget {
                           );
                         }
 
-                        return SliverList(
-                          delegate: SliverChildBuilderDelegate((
-                            context,
-                            index,
-                          ) {
-                            final data =
-                                services[index].data() as Map<String, dynamic>;
-                            String priceStr = data['price'] ?? '0';
-                            if (!priceStr.startsWith('\$')) {
-                              priceStr = '\$$priceStr';
-                            }
-
-                            return Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                              child: _buildServiceTile(
+                        return SliverMainAxisGroup(
+                          slivers: [
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate((
                                 context,
-                                data['title'] ??
-                                    data['name'] ??
-                                    'Unknown Service',
-                                data['desc'] ??
-                                    data['description'] ??
-                                    'No description available',
-                                priceStr,
-                                Icons.build,
-                                serviceCenterId,
-                                serviceCenterName,
-                              ),
-                            );
-                          }, childCount: services.length),
+                                index,
+                              ) {
+                                final data =
+                                    services[index].data() as Map<String, dynamic>;
+                                String priceStr = data['price']?.toString() ?? '0';
+                                if (!priceStr.startsWith('₹') && !priceStr.startsWith('\$')) {
+                                  priceStr = '₹$priceStr';
+                                }
+
+                                return TweenAnimationBuilder<double>(
+                                  duration: Duration(milliseconds: 400 + (index * 50)),
+                                  tween: Tween(begin: 0.0, end: 1.0),
+                                  curve: Curves.easeOutQuint,
+                                  builder: (context, value, child) {
+                                    return Opacity(
+                                      opacity: value,
+                                      child: Transform.translate(
+                                        offset: Offset(0, 20 * (1 - value)),
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                                    child: _buildServiceTile(
+                                      context,
+                                      data['title'] ??
+                                          data['name'] ??
+                                          'Unknown Service',
+                                      data['desc'] ??
+                                          data['description'] ??
+                                          'No description available',
+                                      priceStr,
+                                      _getCategoryIcon(data['category']),
+                                      data['category'] ?? 'General',
+                                      serviceCenterId,
+                                      serviceCenterName,
+                                    ),
+                                  ),
+                                );
+                              }, childCount: services.length),
+                            ),
+                          ],
                         );
                       },
                     ),
@@ -222,6 +351,36 @@ class ServiceSelectionScreen extends StatelessWidget {
               },
             ),
     );
+  }
+
+
+
+  Color _getCategoryColor(String? category) {
+    if (category == null) return AppTheme.primary;
+    switch (category.toLowerCase()) {
+      case 'wash': return Colors.blueAccent;
+      case 'repair': return Colors.orangeAccent;
+      case 'body': return Colors.purpleAccent;
+      case 'tires': return Colors.redAccent;
+      case 'battery': return Colors.yellowAccent;
+      case 'ac': return Colors.cyanAccent;
+      case 'engine': return Colors.tealAccent;
+      default: return AppTheme.primary;
+    }
+  }
+
+  IconData _getCategoryIcon(String? category) {
+    if (category == null) return Icons.grid_view_rounded;
+    switch (category.toLowerCase()) {
+      case 'wash': return Icons.local_car_wash_rounded;
+      case 'repair': return Icons.build_rounded;
+      case 'body': return Icons.brush_rounded;
+      case 'tires': return Icons.tire_repair_rounded;
+      case 'battery': return Icons.battery_charging_full_rounded;
+      case 'ac': return Icons.ac_unit_rounded;
+      case 'engine': return Icons.engineering_rounded;
+      default: return Icons.build_rounded;
+    }
   }
 
   Widget _buildOperatingHours(Map<String, dynamic> hours) {
@@ -305,77 +464,148 @@ class ServiceSelectionScreen extends StatelessWidget {
     String desc,
     String price,
     IconData icon,
+    String category,
     String? serviceCenterId,
     String? serviceCenterName,
   ) {
-    return InkWell(
-      onTap: () {
-        Navigator.pushNamed(
-          context,
-          '/booking',
-          arguments: {
-            'name': name,
-            'desc': desc,
-            'price': price,
-            'serviceCenterId': serviceCenterId,
-            'serviceCenterName': serviceCenterName,
-          },
-        );
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.surface.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Material(
+          color: AppTheme.surface.withValues(alpha: 0.6),
+          child: InkWell(
+            onTap: () {
+              Navigator.pushNamed(
+                context,
+                '/booking',
+                arguments: {
+                  'name': name,
+                  'desc': desc,
+                  'price': price,
+                  'serviceCenterId': serviceCenterId,
+                  'serviceCenterName': serviceCenterName,
+                },
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.05),
+                    Colors.transparent,
+                  ],
+                ),
               ),
-              child: Icon(icon, color: AppTheme.primary, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                      color: Colors.white,
-                      letterSpacing: -0.5,
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primary.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        )
+                      ],
+                    ),
+                    child: Icon(icon, color: AppTheme.accent, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _getCategoryColor(category).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _getCategoryColor(category).withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Text(
+                                category.toUpperCase(),
+                                style: TextStyle(
+                                  color: _getCategoryColor(category),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          desc,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    desc,
-                    style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  const SizedBox(width: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      price,
+                      style: const TextStyle(
+                        color: AppTheme.accent,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Text(
-              price,
-              style: const TextStyle(
-                color: AppTheme.primary,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
+
 
   Widget _buildHeaderImage(String? source) {
     if (source == null || source.isEmpty) {
@@ -410,3 +640,31 @@ class ServiceSelectionScreen extends StatelessWidget {
     );
   }
 }
+
+class FadeInTransition extends StatelessWidget {
+  final Widget child;
+  final Duration duration;
+
+  const FadeInTransition({
+    super.key,
+    required this.child,
+    this.duration = const Duration(milliseconds: 500),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      duration: duration,
+      tween: Tween(begin: 0.0, end: 1.0),
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: child,
+        );
+      },
+      child: child,
+    );
+  }
+}
+

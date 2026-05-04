@@ -12,6 +12,7 @@ import 'package:gearup/models/vehicle.dart';
 import 'package:gearup/mobile_user/service_centers.dart';
 import 'package:gearup/mobile_user/service_history.dart';
 import 'package:gearup/mobile_user/notification_screen.dart';
+import 'package:gearup/mobile_user/nearby_screen.dart';
 import 'package:gearup/services/ai_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -24,49 +25,9 @@ class HomeDashboard extends StatefulWidget {
 }
 
 class _HomeDashboardState extends State<HomeDashboard> {
-  User? _currentUser;
-  bool _isLoading = true;
-  Vehicle? _primaryVehicle;
-
   @override
   void initState() {
     super.initState();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      final user = AuthService.currentUser;
-      if (user != null) {
-        // Load User Data first
-        final userData = await AuthService.getUserData(user.uid);
-        setState(() {
-          _currentUser = userData;
-        });
-
-        // Then try to load vehicles independently
-        try {
-          final vehicles = await VehicleService.getUserVehicles(user.uid);
-          setState(() {
-            _primaryVehicle = vehicles.isNotEmpty ? vehicles.first : null;
-          });
-        } catch (vehicleError) {
-          debugPrint('Error loading vehicles: $vehicleError');
-        }
-
-        setState(() {
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
   }
 
   Future<void> _pickVehicleImage(Vehicle vehicle) async {
@@ -79,9 +40,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
         imageQuality: 70,
       );
       if (imageFile != null) {
-        setState(() {
-          _isLoading = true;
-        });
         
         final File image = File(imageFile.path);
         final bytes = await image.readAsBytes();
@@ -91,7 +49,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
           'imageUrl': base64Image,
         });
 
-        await _loadUserData(); // Reload list
+        // StreamBuilder handles real-time updates automatically
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -104,9 +62,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error picking vehicle image: $e'), backgroundColor: Colors.red),
         );
@@ -116,205 +71,239 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    final authUser = AuthService.currentUser;
+    if (authUser == null) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
+        body: Center(child: Text('Please login to continue', style: TextStyle(color: Colors.white))),
       );
     }
 
-    if (_currentUser == null) {
-      return const Scaffold(
-        body: Center(
-          child: Text(
-            'No user data available',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-      );
-    }
+    return StreamBuilder<User?>(
+      stream: AuthService.userDataStream(authUser.uid),
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting && !userSnapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
+          );
+        }
 
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        automaticallyImplyLeading: false,
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
-              backgroundImage: _getProfileImageProvider(_currentUser!.profileImageUrl),
-              child: (_currentUser!.profileImageUrl == null || _currentUser!.profileImageUrl!.isEmpty)
-                  ? const Icon(Icons.person, color: AppTheme.primary, size: 20)
-                  : null,
-            ),
-          ],
-        ),
-        actions: [
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('notifications')
-                .where('userId', isEqualTo: AuthService.currentUser?.uid)
-                .where('isRead', isEqualTo: false)
-                .snapshots(),
-            builder: (context, snapshot) {
-              final unreadCount = snapshot.data?.docs.length ?? 0;
-              return Container(
-                margin: const EdgeInsets.only(right: 16),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.surface.withValues(alpha: 0.5),
-                ),
-                child: Stack(
-                  clipBehavior: Clip.none,
+        final currentUser = userSnapshot.data;
+        if (currentUser == null) {
+          return const Scaffold(
+            body: Center(child: Text('User data not found', style: TextStyle(color: Colors.white))),
+          );
+        }
+
+        return StreamBuilder<List<Vehicle>>(
+          stream: VehicleService.streamUserVehicles(authUser.uid),
+          builder: (context, vehicleSnapshot) {
+            if (vehicleSnapshot.connectionState == ConnectionState.waiting && !vehicleSnapshot.hasData) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
+              );
+            }
+
+            final vehicles = vehicleSnapshot.data ?? [];
+            final primaryVehicle = vehicles.isNotEmpty ? vehicles.first : null;
+
+            return Scaffold(
+              appBar: AppBar(
+                elevation: 0,
+                backgroundColor: Colors.transparent,
+                automaticallyImplyLeading: false,
+                title: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.notifications_none,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const NotificationScreen(),
-                          ),
-                        );
-                      },
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
+                      backgroundImage: _getProfileImageProvider(currentUser.profileImageUrl),
+                      child: (currentUser.profileImageUrl == null || currentUser.profileImageUrl!.isEmpty)
+                          ? const Icon(Icons.person, color: AppTheme.primary, size: 20)
+                          : null,
                     ),
-                    if (unreadCount > 0)
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: AppTheme.accent,
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          child: Text(
-                            unreadCount > 9 ? '9+' : '$unreadCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Good ${DateTime.now().hour < 12
-                  ? 'Morning'
-                  : DateTime.now().hour < 17
-                  ? 'Afternoon'
-                  : 'Evening'}, ${_currentUser!.name.split(' ').first}.',
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              _primaryVehicle != null
-                  ? 'Your ${_primaryVehicle!.make} is looking great today.'
-                  : 'Welcome to GearUp.',
-              style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 15,
-                letterSpacing: 0.2,
-              ),
-            ),
-            const SizedBox(height: 32),
-            _buildVehicleCard(),
-            const SizedBox(height: 32),
-            _buildAIRecommendations(),
-            const SizedBox(height: 32),
-            const Text(
-              'Quick Actions',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildQuickAction(
-                    Icons.calendar_month_outlined,
-                    'Service',
-                    () {
-                      if (widget.onTabSelected != null) {
-                        widget.onTabSelected!(2);
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ServiceCentersScreen(),
-                          ),
-                        );
-                      }
+                actions: [
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('notifications')
+                        .where('userId', isEqualTo: authUser.uid)
+                        .where('isRead', isEqualTo: false)
+                        .snapshots(),
+                    builder: (context, notificationSnapshot) {
+                      final unreadCount = notificationSnapshot.data?.docs.length ?? 0;
+                      return Container(
+                        margin: const EdgeInsets.only(right: 16),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppTheme.surface.withValues(alpha: 0.5),
+                        ),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.notifications_none,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const NotificationScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                            if (unreadCount > 0)
+                              Positioned(
+                                right: 8,
+                                top: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: AppTheme.accent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 16,
+                                    minHeight: 16,
+                                  ),
+                                  child: Text(
+                                    unreadCount > 9 ? '9+' : '$unreadCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
                     },
-                  ),
-                  _buildQuickAction(
-                    Icons.history_outlined,
-                    'History',
-                    () {
-                      if (widget.onTabSelected != null) {
-                        widget.onTabSelected!(4);
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ActivityHistoryScreen(),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  _buildQuickAction(Icons.near_me_outlined, 'Nearby', () {}),
-                  _buildQuickAction(
-                    Icons.emergency_outlined,
-                    'Emergency',
-                    () => Navigator.pushNamed(context, '/emergency'),
-                    isAlert: true,
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
+              body: RefreshIndicator(
+                onRefresh: () async {
+                  setState(() {});
+                  await Future.delayed(const Duration(seconds: 1));
+                },
+                color: AppTheme.primary,
+                backgroundColor: AppTheme.surface,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Good ${DateTime.now().hour < 12
+                            ? 'Morning'
+                            : DateTime.now().hour < 17
+                            ? 'Afternoon'
+                            : 'Evening'}, ${currentUser.name.split(' ').first}.',
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        primaryVehicle != null
+                            ? 'Your ${primaryVehicle.make} is looking great today.'
+                            : 'Welcome to GearUp.',
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 15,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      _buildVehicleCard(currentUser, primaryVehicle),
+                      const SizedBox(height: 32),
+                      _buildAIRecommendations(primaryVehicle),
+                      const SizedBox(height: 32),
+                      const SizedBox(height: 16),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildQuickAction(
+                              Icons.calendar_month_outlined,
+                              'Service',
+                              () {
+                                if (widget.onTabSelected != null) {
+                                  widget.onTabSelected!(2);
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const ServiceCentersScreen(),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                            _buildQuickAction(
+                              Icons.history_outlined,
+                              'History',
+                              () {
+                                if (widget.onTabSelected != null) {
+                                  widget.onTabSelected!(4);
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const ActivityHistoryScreen(),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                            _buildQuickAction(
+                              Icons.near_me_outlined, 
+                              'Nearby', 
+                              () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => NearbyScreen(),
+                                  ),
+                                );
+                              }
+                            ),
+                            _buildQuickAction(
+                              Icons.emergency_outlined,
+                              'Emergency',
+                              () => Navigator.pushNamed(context, '/emergency'),
+                              isAlert: true,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
-  Widget _buildAIRecommendations() {
-    if (_primaryVehicle == null) return const SizedBox.shrink();
+  Widget _buildAIRecommendations(Vehicle? primaryVehicle) {
+    if (primaryVehicle == null) return const SizedBox.shrink();
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: AIService.aiConfigStream(),
@@ -329,15 +318,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
         final List<Widget> alerts = [];
         
         if (enableHealth) {
-          final kmSinceService = _primaryVehicle!.kilometers - _primaryVehicle!.lastServiceKm;
+          final kmSinceService = primaryVehicle.kilometers - primaryVehicle.lastServiceKm;
           if (kmSinceService > 5000) {
             alerts.add(_buildInsightCard(
               'Maintenance Alert',
-              'Your ${_primaryVehicle!.make} has traveled $kmSinceService km since the last service. A checkup is recommended.',
+              'Your ${primaryVehicle.make} has traveled $kmSinceService km since the last service. A checkup is recommended.',
               Icons.warning_amber_rounded,
               Colors.orangeAccent,
             ));
-          } else if (!_primaryVehicle!.isConnected) {
+          } else if (!primaryVehicle.isConnected) {
             alerts.add(_buildInsightCard(
               'Connection Lost',
               'We haven\'t received data from your vehicle in a while.',
@@ -348,7 +337,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             // Default "Good Health" info
             alerts.add(_buildInsightCard(
               'System Health',
-              'All systems in your ${_primaryVehicle!.make} are performing optimally.',
+              'All systems in your ${primaryVehicle.make} are performing optimally.',
               Icons.check_circle_outline_rounded,
               Colors.greenAccent,
             ));
@@ -465,8 +454,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
-  Widget _buildVehicleCard() {
-    if (_primaryVehicle == null) {
+  Widget _buildVehicleCard(User currentUser, Vehicle? primaryVehicle) {
+    if (primaryVehicle == null) {
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -500,7 +489,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: () => _showAddVehicleDialog(),
+              onPressed: () => _showAddVehicleDialog(currentUser),
               icon: const Icon(Icons.add),
               label: const Text('Add Vehicle'),
               style: ElevatedButton.styleFrom(
@@ -541,7 +530,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             Column(
               children: [
                 GestureDetector(
-                  onTap: () => _pickVehicleImage(_primaryVehicle!),
+                  onTap: () => _pickVehicleImage(primaryVehicle),
                   child: Container(
                     height: 160,
                     width: double.infinity,
@@ -554,26 +543,25 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     child: Stack(
                       children: [
                         Positioned.fill(
-                          child: _primaryVehicle!.imageUrl.isNotEmpty &&
-                                  _getProfileImageProvider(
-                                        _primaryVehicle!.imageUrl,
-                                      ) !=
-                                      null
-                              ? ClipRRect(
+                          child: Builder(
+                            builder: (context) {
+                              final provider = _getProfileImageProvider(primaryVehicle.imageUrl);
+                              if (provider != null) {
+                                return ClipRRect(
                                   borderRadius: const BorderRadius.vertical(
                                     top: Radius.circular(28),
                                   ),
                                   child: Image(
-                                    image: _getProfileImageProvider(
-                                      _primaryVehicle!.imageUrl,
-                                    )!,
+                                    image: provider,
                                     fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            _buildPlaceholderCar(),
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        _buildPlaceholderCar(),
                                   ),
-                                )
-                              : _buildPlaceholderCar(),
+                                );
+                              }
+                              return _buildPlaceholderCar();
+                            },
+                          ),
                         ),
                         Positioned(
                           bottom: 12,
@@ -611,7 +599,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         children: [
                           Expanded(
                             child: Text(
-                              _primaryVehicle!.model.toUpperCase(),
+                              primaryVehicle.model.toUpperCase(),
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -622,7 +610,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               maxLines: 1,
                             ),
                           ),
-                          if (_primaryVehicle!.licensePlate.isNotEmpty)
+                          if (primaryVehicle.licensePlate.isNotEmpty)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
@@ -633,7 +621,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                _primaryVehicle!.licensePlate.toUpperCase(),
+                                primaryVehicle.licensePlate.toUpperCase(),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
@@ -660,15 +648,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _buildDetailItem('Make', _primaryVehicle!.make),
+                            _buildDetailItem('Make', primaryVehicle.make),
                             _buildDetailVerticalDivider(),
-                            _buildDetailItem('Model', _primaryVehicle!.model),
+                            _buildDetailItem('Model', primaryVehicle.model),
                             _buildDetailVerticalDivider(),
-                            _buildDetailItem('Year', _primaryVehicle!.year),
+                            _buildDetailItem('Year', primaryVehicle.year),
                             _buildDetailVerticalDivider(),
-                            _buildDetailItem('Color', _primaryVehicle!.color),
+                            _buildDetailItem('Color', primaryVehicle.color),
                             _buildDetailVerticalDivider(),
-                            _buildDetailItem('Mileage', '${_primaryVehicle!.kilometers}'),
+                            _buildDetailItem('Mileage', '${primaryVehicle.kilometers}'),
                           ],
                         ),
                       ),
@@ -731,7 +719,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
-  void _showAddVehicleDialog() {
+  void _showAddVehicleDialog(User currentUser) {
     final makeController = TextEditingController();
     final modelController = TextEditingController();
     final yearController = TextEditingController();
@@ -838,6 +826,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                       const SizedBox(height: 16),
                       _buildThemedTextField(
+                        controller: licensePlateController,
+                        label: 'License Plate',
+                        hint: 'e.g., KL-01-AB-1234',
+                        icon: Icons.badge,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildThemedTextField(
                         controller: kmController,
                         label: 'Mileage',
                         hint: 'e.g., 12000',
@@ -878,8 +873,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         'Add Vehicle',
                         AppTheme.primary,
                         () async {
-                          if (_currentUser != null &&
-                              makeController.text.isNotEmpty &&
+                          if (makeController.text.isNotEmpty &&
                               modelController.text.isNotEmpty &&
                               yearController.text.isNotEmpty) {
                             try {
@@ -892,14 +886,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 color: colorController.text.trim(),
                                 licensePlate: licensePlateController.text
                                     .trim(),
-                                userId: _currentUser!.uid,
+                                userId: currentUser.uid,
                                 kilometers: int.tryParse(kmController.text.trim()) ?? 0,
                                 lastServiceKm: int.tryParse(kmController.text.trim()) ?? 0,
                                 isConnected: true,
                               );
 
                               await VehicleService.addVehicle(vehicle);
-                              await _loadUserData(); // Refresh vehicle list
 
                               if (context.mounted) {
                                 Navigator.pop(context);
@@ -1035,7 +1028,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
+
   Widget _buildQuickAction(
+
     IconData icon,
     String label,
     VoidCallback onTap, {

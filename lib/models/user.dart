@@ -36,6 +36,8 @@ class User {
   final String? description;
   final double? rating;
   final int? reviewsCount;
+  final Map<String, bool>? serviceCategories;
+  final Map<String, String>? serviceCategoryDescriptions;
 
   User({
     required this.uid,
@@ -51,6 +53,8 @@ class User {
     this.description,
     this.rating,
     this.reviewsCount,
+    this.serviceCategories,
+    this.serviceCategoryDescriptions,
   });
 
   static String? _parseDate(dynamic value) {
@@ -75,6 +79,8 @@ class User {
       description: map['description'],
       rating: map['rating'] != null ? (map['rating'] as num).toDouble() : null,
       reviewsCount: map['reviewsCount'] != null ? (map['reviewsCount'] as num).toInt() : null,
+      serviceCategories: map['serviceCategories'] != null ? Map<String, bool>.from(map['serviceCategories']) : null,
+      serviceCategoryDescriptions: map['serviceCategoryDescriptions'] != null ? Map<String, String>.from(map['serviceCategoryDescriptions']) : null,
     );
   }
 
@@ -93,6 +99,8 @@ class User {
       'description': description,
       'rating': rating,
       'reviewsCount': reviewsCount,
+      'serviceCategories': serviceCategories,
+      'serviceCategoryDescriptions': serviceCategoryDescriptions,
     };
   }
 }

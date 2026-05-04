@@ -10,6 +10,8 @@ import 'dart:io';
 import 'package:gearup/services/vehicle_service.dart';
 import 'package:gearup/models/vehicle.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 
 class ProfilePage extends StatefulWidget {
   final Function(int)? onTabSelected;
@@ -234,8 +236,13 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      body: RefreshIndicator(
+        onRefresh: _loadUserData,
+        color: AppTheme.primary,
+        backgroundColor: AppTheme.surface,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Column(
           children: [
             const SizedBox(height: 16),
@@ -320,15 +327,17 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 40),
+            _buildPreferredServicesSection(),
+            const SizedBox(height: 40),
             Align(
               alignment: Alignment.centerLeft,
-              child: const Text(
+              child: Text(
                 'MANAGE',
-                style: TextStyle(
+                style: GoogleFonts.outfit(
                   fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
-                  color: Colors.white54,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2.0,
+                  color: AppTheme.primary.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -382,8 +391,9 @@ class _ProfilePageState extends State<ProfilePage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildListTile(IconData icon, String title, String subtitle, {VoidCallback? onTap}) {
     return InkWell(
@@ -754,6 +764,169 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPreferredServicesSection() {
+    final Map<String, dynamic> categoryConfig = {
+      'Engine': {'icon': Icons.engineering, 'color': const Color(0xFF6366F1)},
+      'Wash': {'icon': Icons.local_car_wash, 'color': const Color(0xFF0EA5E9)},
+      'Oil': {'icon': Icons.water_drop, 'color': const Color(0xFFF59E0B)},
+      'Brakes': {'icon': Icons.album, 'color': const Color(0xFFEF4444)},
+      'Tyres': {'icon': Icons.adjust, 'color': const Color(0xFF10B981)},
+      'Repair': {'icon': Icons.build_circle, 'color': const Color(0xFF8B5CF6)},
+      'AC': {'icon': Icons.ac_unit, 'color': const Color(0xFF06B6D4)},
+      'Electrical': {'icon': Icons.electric_bolt, 'color': const Color(0xFFEAB308)},
+    };
+
+    final userCategories = _currentUser?.serviceCategories ?? {};
+    final selectedCategories = userCategories.entries
+        .where((e) => e.value == true)
+        .map((e) {
+          final config = categoryConfig[e.key] ?? {'icon': Icons.build, 'color': AppTheme.primary};
+          return {
+            'label': e.key,
+            'icon': config['icon'],
+            'color': config['color'],
+          };
+        })
+        .toList();
+
+    if (selectedCategories.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'HIGHLIGHTED SERVICES',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2.0,
+                    color: AppTheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Your frequently used categories',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    fontSize: 12,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primary.withValues(alpha: 0.15),
+                    AppTheme.primary.withValues(alpha: 0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppTheme.primary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.auto_awesome, color: AppTheme.primary, size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Priority',
+                    style: TextStyle(
+                      color: AppTheme.primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          height: 110,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            itemCount: selectedCategories.length,
+            itemBuilder: (context, index) {
+              final cat = selectedCategories[index];
+              final color = cat['color'] as Color;
+              return Container(
+                width: 85,
+                margin: const EdgeInsets.only(right: 16),
+                child: Column(
+                  children: [
+                    Container(
+                      height: 70,
+                      width: 70,
+                      decoration: BoxDecoration(
+                        color: AppTheme.surface.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: color.withValues(alpha: 0.3),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withValues(alpha: 0.1),
+                            blurRadius: 12,
+                            spreadRadius: -2,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: color.withValues(alpha: 0.08),
+                            ),
+                          ),
+                          Icon(
+                            cat['icon'] as IconData,
+                            color: color,
+                            size: 28,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      cat['label'] as String,
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -1446,6 +1619,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final phoneController = TextEditingController(
       text: _currentUser!.phoneNumber,
     );
+    Map<String, bool> selectedCategories = Map<String, bool>.from(_currentUser!.serviceCategories ?? {});
+    
+    final List<String> availableCategories = [
+      'Engine', 'Wash', 'Oil', 'Brakes', 'Tyres', 'Repair', 'AC', 'Electrical'
+    ];
 
     showDialog(
       context: context,
@@ -1525,6 +1703,54 @@ class _ProfilePageState extends State<ProfilePage> {
                         icon: Icons.phone,
                         keyboardType: TextInputType.phone,
                       ),
+                      const SizedBox(height: 24),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'SERVICE PREFERENCES',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                            color: AppTheme.primary.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      StatefulBuilder(
+                        builder: (context, setDialogState) {
+                          return Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: availableCategories.map((category) {
+                              final isSelected = selectedCategories[category] ?? false;
+                              return FilterChip(
+                                label: Text(category),
+                                selected: isSelected,
+                                onSelected: (bool value) {
+                                  setDialogState(() {
+                                    selectedCategories[category] = value;
+                                  });
+                                },
+                                backgroundColor: AppTheme.surface,
+                                selectedColor: AppTheme.primary.withValues(alpha: 0.2),
+                                checkmarkColor: AppTheme.primary,
+                                labelStyle: TextStyle(
+                                  color: isSelected ? AppTheme.primary : Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(
+                                    color: isSelected ? AppTheme.primary : Colors.white.withValues(alpha: 0.1),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -1566,6 +1792,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   .update({
                                     'name': nameController.text.trim(),
                                     'phoneNumber': phoneController.text.trim(),
+                                    'serviceCategories': selectedCategories,
                                   });
                               await _loadUserData();
                               if (!context.mounted) return;
